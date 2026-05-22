@@ -17,6 +17,7 @@
   --danger-strong: #ecb9ad;
   --success: #dff2e3;
   --success-strong: #c6e8cf;
+  --info: #e8edf7;
   --shadow-soft: 0 12px 34px rgba(0, 0, 0, 0.06);
   --shadow-medium: 0 22px 60px rgba(0, 0, 0, 0.12);
   --shadow-strong: 0 30px 90px rgba(0, 0, 0, 0.28);
@@ -615,7 +616,7 @@ a:focus {
 }
 
 .tag.import-tag {
-  background: #e8edf7;
+  background: var(--info);
 }
 
 .ingredients-preview {
@@ -665,7 +666,8 @@ a:focus {
   text-align: center;
 }
 
-.info-card {
+.info-card,
+.notice-card {
   margin-bottom: 18px;
 }
 
@@ -678,6 +680,19 @@ a:focus {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
+}
+
+.notice-card {
+  border: 1px solid #d6c078;
+  border-radius: var(--radius-lg);
+  background: #fff8da;
+  padding: 16px;
+  color: #4d3f11;
+  line-height: 1.5;
+}
+
+.notice-card strong {
+  color: #2f2608;
 }
 
 .source-list {
@@ -895,7 +910,8 @@ a:focus {
 .modal-content > form,
 .modal-content > p,
 .modal-content > h2,
-.modal-content > .eyebrow {
+.modal-content > .eyebrow,
+.modal-content > .notice-card {
   padding-left: 28px;
   padding-right: 28px;
 }
@@ -915,6 +931,12 @@ a:focus {
   margin-top: 0;
   color: var(--muted);
   line-height: 1.55;
+}
+
+.modal-content > .notice-card {
+  margin-left: 28px;
+  margin-right: 28px;
+  padding: 16px;
 }
 
 .modal-body {
@@ -989,6 +1011,11 @@ a:focus {
 
 .serving-controls button:hover {
   background: #3a3a3a;
+}
+
+.serving-controls button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .serving-controls strong {
@@ -1156,6 +1183,7 @@ a:focus {
   }
 
   .nav-button,
+  .ghost-button,
   .primary-button,
   .secondary-button,
   .primary-link,
@@ -1214,9 +1242,15 @@ a:focus {
   .modal-content > form,
   .modal-content > p,
   .modal-content > h2,
-  .modal-content > .eyebrow {
+  .modal-content > .eyebrow,
+  .modal-content > .notice-card {
     padding-left: 20px;
     padding-right: 20px;
+  }
+
+  .modal-content > .notice-card {
+    margin-left: 20px;
+    margin-right: 20px;
   }
 
   .modal-body h2,
