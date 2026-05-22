@@ -845,6 +845,65 @@ a:focus {
   background: #dccbbc;
 }
 
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.settings-card {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow-soft);
+}
+
+.settings-card h3 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.settings-card p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.settings-card.danger-zone {
+  border-color: var(--danger-strong);
+  background: #fff8f6;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.button-column {
+  display: grid;
+  gap: 10px;
+}
+
+.data-textarea {
+  min-height: 220px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre;
+}
+
+.settings-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -1150,7 +1209,8 @@ a:focus {
     max-width: 460px;
   }
 
-  .dashboard {
+  .dashboard,
+  .settings-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -1205,6 +1265,7 @@ a:focus {
   }
 
   .dashboard,
+  .settings-grid,
   .filter-grid,
   .recipe-grid,
   .search-row,
@@ -1256,5 +1317,9 @@ a:focus {
   .modal-body h2,
   .modal-content > h2 {
     font-size: 30px;
+  }
+
+  .button-row {
+    flex-direction: column;
   }
 }
