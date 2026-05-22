@@ -8,7 +8,7 @@
 
   <meta
     name="description"
-    content="RecipeFinder ist eine moderne Rezept-App mit Rezeptsuche, Portionsskalierung, Einkaufsliste, Quellen-Manager, URL-Import-Simulation und Datenverwaltung."
+    content="RecipeFinder ist eine moderne Rezept-App mit Rezeptsuche, Portionsskalierung, Einkaufsliste, Quellen-Manager, URL-Import-Simulation, Kochanleitungen und Datenverwaltung."
   />
 
   <link rel="stylesheet" href="styles.css" />
@@ -83,7 +83,7 @@
         <h2>Smart Cooking Hub</h2>
 
         <p>
-          Suche, Quellen, Mengenlogik, Portionsregler und Einkaufsliste in einer App.
+          Suche, Quellen, Mengenlogik, Portionsregler, Kochanleitung und Einkaufsliste in einer App.
         </p>
       </aside>
     </section>
@@ -476,6 +476,17 @@
           <ul id="modalIngredients" class="ingredient-list"></ul>
         </section>
 
+        <section class="instruction-section" aria-labelledby="instructionsHeading">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Kochanleitung</p>
+              <h3 id="instructionsHeading">Zubereitung</h3>
+            </div>
+          </div>
+
+          <ol id="modalInstructions" class="instruction-list"></ol>
+        </section>
+
         <div class="modal-actions">
           <button id="modalShoppingButton" class="success-button" type="button">
             Zutaten zur Einkaufsliste hinzufügen
@@ -606,6 +617,18 @@
 
           <span class="form-help">
             Eine Zutat pro Zeile. Mengen werden im Prototyp einfach analysiert.
+          </span>
+        </label>
+
+        <label>
+          Zubereitungsschritte
+          <textarea
+            id="newRecipeInstructions"
+            placeholder="Pasta in Salzwasser kochen.&#10;Olivenöl in einer Pfanne erhitzen.&#10;Alles vermengen und servieren."
+          ></textarea>
+
+          <span class="form-help">
+            Ein Schritt pro Zeile. Wenn du das Feld leer lässt, erzeugt die App eine einfache Platzhalter-Anleitung.
           </span>
         </label>
 
