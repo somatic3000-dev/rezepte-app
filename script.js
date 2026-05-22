@@ -356,8 +356,8 @@ function normalizeRecipe(recipe) {
     sourceUrl: recipe.sourceUrl || "",
     category: recipe.category || "Hauptgericht",
     difficulty: recipe.difficulty || "Einfach",
-    servings: Number(recipe.servings || 2),
-    totalTime: Number(recipe.totalTime || recipe.time || 30),
+    servings: Math.max(1, Number(recipe.servings || 2)),
+    totalTime: Math.max(1, Number(recipe.totalTime || recipe.time || 30)),
     tags: Array.isArray(recipe.tags) ? recipe.tags : [],
     icon,
     imageClass: recipe.imageClass || getImageClassFromIcon(icon),
@@ -385,10 +385,11 @@ function normalizeSource(source) {
 
 function normalizeShoppingItem(item) {
   return {
-    id: item.id || `shopping-${Date.now()}`,
+    id: item.id || `shopping-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     food: item.food || item.name || "Unbekannte Zutat",
+    normalizedFood: item.normalizedFood || item.normalized_food || item.food || item.name || "Unbekannte Zutat",
     amount: item.amount === null || item.amount === undefined ? null : Number(item.amount),
-    unit: item.unit || "",
+    unit: normalizeUnit(item.unit || ""),
     checked: Boolean(item.checked),
     note: item.note || "",
     sourceRecipeIds: Array.isArray(item.sourceRecipeIds) ? item.sourceRecipeIds : []
@@ -413,7 +414,8 @@ function normalizeIngredients(ingredients) {
         note: ingredient.note || "",
         scalable: ingredient.scalable !== false,
         scalingGroup: ingredient.scalingGroup || ingredient.scaling_group || "normal",
-        conversionNote: ingredient.conversionNote || ingredient.conversion_note || ""
+        conversionNote: ingredient.conversionNote || ingredient.conversion_note || "",
+        confidence: ingredient.confidence || "medium"
       };
     }
 
@@ -429,73 +431,125 @@ function parseIngredientLine(line) {
   const originalText = String(line || "").trim();
   const lower = originalText.toLowerCase();
 
+  let amount = null;
+  let unit = "";
+  let foodText = originalText;
+  let preparation = "";
+  let note = "";
+  let scalable = true;
+  let scalingGroup = "normal";
+  let conversionNote = "";
+  let confidence = "medium";
+
   const qualitativePatterns = [
     "nach geschmack",
     "zum abschmecken",
-    "zum servieren",
-    "zum garnieren"
+    "nach belieben",
+    "optional",
+    "bei bedarf"
   ];
 
   const cookingMediumPatterns = [
     "zum anbraten",
     "zum braten",
     "zum kochen",
-    "für die form"
+    "für die form",
+    "zum einfetten"
   ];
 
-  let scalable = true;
-  let scalingGroup = "normal";
-  let note = "";
-  let amount = null;
-  let unit = "";
-  let foodText = originalText;
+  const garnishPatterns = [
+    "zum servieren",
+    "zum garnieren",
+    "als topping",
+    "zum bestreuen"
+  ];
 
-  if (qualitativePatterns.some((pattern) => lower.includes(pattern))) {
-    scalable = false;
-    scalingGroup = "qualitative";
-    note = getMatchedPattern(originalText, qualitativePatterns);
-  }
-
-  if (cookingMediumPatterns.some((pattern) => lower.includes(pattern))) {
-    scalable = false;
-    scalingGroup = "cooking_medium";
-    note = getMatchedPattern(originalText, cookingMediumPatterns);
-  }
+  const vaguePatterns = [
+    "eine handvoll",
+    "handvoll",
+    "etwas",
+    "ein wenig",
+    "n. b.",
+    "n.b."
+  ];
 
   const amountMatch = originalText.match(
-    /^(\d+(?:[,.]\d+)?|\d+\/\d+)\s*(kg|g|gramm|ml|l|liter|tl|teelöffel|el|esslöffel|stück|stk\.?|prise|prisen|bund|dose|dosen|packung|packungen|cup|cups|oz)?\s+(.+)$/i
+    /^((?:\d+\s+\d+\/\d+)|(?:\d+[,.]\d+)|(?:\d+\/\d+)|(?:\d+)|(?:½|¼|¾|⅓|⅔))\s*(kg|kilogramm|g|gramm|ml|milliliter|l|liter|tl|teelöffel|el|esslöffel|stück|stk\.?|prise|prisen|bund|dose|dosen|packung|packungen|becher|cup|cups|oz|unze|unzen|lb|pfund)?\s+(.+)$/i
   );
 
   if (amountMatch) {
     amount = parseAmount(amountMatch[1]);
     unit = normalizeUnit(amountMatch[2] || "");
     foodText = amountMatch[3].trim();
+    confidence = "high";
+  }
+
+  if (!amountMatch) {
+    const vagueMatch = vaguePatterns.find((pattern) => lower.includes(pattern));
+
+    if (vagueMatch) {
+      note = "unklare Menge";
+      scalable = false;
+      scalingGroup = "unknown";
+      foodText = removeKnownPhrases(originalText, [vagueMatch]);
+      confidence = "low";
+    }
+  }
+
+  const lowerFood = foodText.toLowerCase();
+
+  if (qualitativePatterns.some((pattern) => lower.includes(pattern))) {
+    note = appendNote(note, getMatchedPattern(originalText, qualitativePatterns));
+    scalable = false;
+    scalingGroup = "qualitative";
+    confidence = "high";
+  }
+
+  if (cookingMediumPatterns.some((pattern) => lower.includes(pattern))) {
+    note = appendNote(note, getMatchedPattern(originalText, cookingMediumPatterns));
+    scalable = false;
+    scalingGroup = "cooking_medium";
+    confidence = "high";
+  }
+
+  if (garnishPatterns.some((pattern) => lower.includes(pattern))) {
+    note = appendNote(note, getMatchedPattern(originalText, garnishPatterns));
+    scalable = false;
+    scalingGroup = "garnish";
+    confidence = "high";
   }
 
   if (unit === "Prise") {
     scalable = false;
     scalingGroup = "spice";
+    confidence = "high";
   }
 
   if (!unit && amount !== null) {
-    const lowerFood = foodText.toLowerCase();
-
     if (lowerFood.startsWith("ei") || lowerFood.startsWith("eier")) {
       unit = "Stück";
       foodText = "Ei";
+      confidence = "medium";
     }
   }
 
-  const converted = convertToMetric(amount, unit, foodText);
-
-  amount = converted.amount;
-  unit = converted.unit;
-
-  if (converted.conversionNote) {
-    note = note ? `${note}; ${converted.conversionNote}` : converted.conversionNote;
+  if (!amountMatch && !note && originalText) {
+    scalable = false;
+    scalingGroup = "unknown";
+    note = "keine eindeutige Menge erkannt";
+    confidence = "low";
   }
 
-  const preparation = detectPreparation(foodText);
+  const converted = convertToMetric(amount, unit, foodText);
+  amount = converted.amount;
+  unit = converted.unit;
+  conversionNote = converted.conversionNote;
+
+  if (conversionNote) {
+    note = appendNote(note, conversionNote);
+  }
+
+  preparation = detectPreparation(foodText);
   const food = cleanFoodName(foodText);
   const normalizedFood = normalizeFoodName(food);
 
@@ -510,12 +564,31 @@ function parseIngredientLine(line) {
     note,
     scalable,
     scalingGroup,
-    conversionNote: converted.conversionNote || ""
+    conversionNote,
+    confidence
   };
 }
 
 function parseAmount(value) {
-  const clean = String(value).trim().replace(",", ".");
+  const raw = String(value || "").trim();
+  const unicodeMap = {
+    "½": 0.5,
+    "¼": 0.25,
+    "¾": 0.75,
+    "⅓": 1 / 3,
+    "⅔": 2 / 3
+  };
+
+  if (unicodeMap[raw] !== undefined) {
+    return unicodeMap[raw];
+  }
+
+  if (/^\d+\s+\d+\/\d+$/.test(raw)) {
+    const [whole, fraction] = raw.split(/\s+/);
+    return Number(whole) + parseAmount(fraction);
+  }
+
+  const clean = raw.replace(",", ".");
 
   if (clean.includes("/")) {
     const [numerator, denominator] = clean.split("/").map(Number);
@@ -531,9 +604,11 @@ function normalizeUnit(unit) {
 
   const unitMap = {
     kg: "kg",
+    kilogramm: "kg",
     g: "g",
     gramm: "g",
     ml: "ml",
+    milliliter: "ml",
     l: "l",
     liter: "l",
     tl: "TL",
@@ -550,16 +625,21 @@ function normalizeUnit(unit) {
     dosen: "Dose",
     packung: "Packung",
     packungen: "Packung",
+    becher: "cup",
     cup: "cup",
     cups: "cup",
-    oz: "oz"
+    oz: "oz",
+    unze: "oz",
+    unzen: "oz",
+    lb: "lb",
+    pfund: "lb"
   };
 
   return unitMap[clean] || unit || "";
 }
 
 function convertToMetric(amount, unit, foodText) {
-  if (amount === null) {
+  if (amount === null || amount === undefined) {
     return {
       amount,
       unit,
@@ -569,16 +649,44 @@ function convertToMetric(amount, unit, foodText) {
 
   const normalizedFood = normalizeFoodName(foodText);
 
+  if (unit === "kg") {
+    return {
+      amount,
+      unit: "kg",
+      conversionNote: ""
+    };
+  }
+
+  if (unit === "l") {
+    return {
+      amount,
+      unit: "l",
+      conversionNote: ""
+    };
+  }
+
   if (unit === "oz") {
     return {
-      amount: amount * 28,
+      amount: amount * 28.35,
       unit: "g",
       conversionNote: "oz wurde metrisch in g umgerechnet"
     };
   }
 
+  if (unit === "lb") {
+    return {
+      amount: amount * 453.6,
+      unit: "g",
+      conversionNote: "lb wurde metrisch in g umgerechnet"
+    };
+  }
+
   if (unit === "cup") {
-    if (["Wasser", "Milch", "Gemüsebrühe", "Brühe"].includes(normalizedFood)) {
+    const liquidFoods = ["Wasser", "Milch", "Gemüsebrühe", "Brühe", "Kokosmilch", "Sahne"];
+    const flourFoods = ["Mehl", "Weizenmehl"];
+    const sugarFoods = ["Zucker"];
+
+    if (liquidFoods.includes(normalizedFood)) {
       return {
         amount: amount * 240,
         unit: "ml",
@@ -586,7 +694,7 @@ function convertToMetric(amount, unit, foodText) {
       };
     }
 
-    if (["Mehl", "Weizenmehl"].includes(normalizedFood)) {
+    if (flourFoods.includes(normalizedFood)) {
       return {
         amount: amount * 120,
         unit: "g",
@@ -594,7 +702,7 @@ function convertToMetric(amount, unit, foodText) {
       };
     }
 
-    if (["Zucker"].includes(normalizedFood)) {
+    if (sugarFoods.includes(normalizedFood)) {
       return {
         amount: amount * 200,
         unit: "g",
@@ -621,16 +729,59 @@ function getMatchedPattern(text, patterns) {
   return patterns.find((pattern) => lower.includes(pattern)) || "";
 }
 
+function appendNote(existingNote, newNote) {
+  if (!newNote) {
+    return existingNote;
+  }
+
+  if (!existingNote) {
+    return newNote;
+  }
+
+  if (existingNote.includes(newNote)) {
+    return existingNote;
+  }
+
+  return `${existingNote}; ${newNote}`;
+}
+
+function removeKnownPhrases(text, phrases) {
+  let result = String(text || "");
+
+  phrases.forEach((phrase) => {
+    result = result.replace(new RegExp(escapeRegExp(phrase), "gi"), "");
+  });
+
+  return result.trim();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function detectPreparation(foodText) {
   const lower = foodText.toLowerCase();
 
   const preparationMap = [
     { pattern: "gehackte", value: "gehackt" },
+    { pattern: "gehackter", value: "gehackt" },
+    { pattern: "gehacktes", value: "gehackt" },
     { pattern: "gehackt", value: "gehackt" },
     { pattern: "geriebene", value: "gerieben" },
+    { pattern: "geriebener", value: "gerieben" },
+    { pattern: "geriebenes", value: "gerieben" },
     { pattern: "gerieben", value: "gerieben" },
+    { pattern: "gewürfelte", value: "gewürfelt" },
+    { pattern: "gewürfelter", value: "gewürfelt" },
+    { pattern: "gewürfeltes", value: "gewürfelt" },
     { pattern: "gewürfelt", value: "gewürfelt" },
+    { pattern: "geschnittene", value: "geschnitten" },
+    { pattern: "geschnittener", value: "geschnitten" },
+    { pattern: "geschnittenes", value: "geschnitten" },
     { pattern: "geschnitten", value: "geschnitten" },
+    { pattern: "frische", value: "frisch" },
+    { pattern: "frischer", value: "frisch" },
+    { pattern: "frisches", value: "frisch" },
     { pattern: "frisch", value: "frisch" }
   ];
 
@@ -641,16 +792,38 @@ function detectPreparation(foodText) {
 function cleanFoodName(foodText) {
   return String(foodText || "")
     .replace(/\bgehackte\b/gi, "")
+    .replace(/\bgehackter\b/gi, "")
+    .replace(/\bgehacktes\b/gi, "")
     .replace(/\bgehackt\b/gi, "")
     .replace(/\bgeriebene\b/gi, "")
+    .replace(/\bgeriebener\b/gi, "")
+    .replace(/\bgeriebenes\b/gi, "")
     .replace(/\bgerieben\b/gi, "")
+    .replace(/\bgewürfelte\b/gi, "")
+    .replace(/\bgewürfelter\b/gi, "")
+    .replace(/\bgewürfeltes\b/gi, "")
     .replace(/\bgewürfelt\b/gi, "")
+    .replace(/\bgeschnittene\b/gi, "")
+    .replace(/\bgeschnittener\b/gi, "")
+    .replace(/\bgeschnittenes\b/gi, "")
     .replace(/\bgeschnitten\b/gi, "")
     .replace(/\bfrisch(e|er|es|en)?\b/gi, "")
     .replace(/\bnach Geschmack\b/gi, "")
+    .replace(/\bnach Belieben\b/gi, "")
+    .replace(/\bzum Abschmecken\b/gi, "")
     .replace(/\bzum Anbraten\b/gi, "")
     .replace(/\bzum Braten\b/gi, "")
     .replace(/\bzum Kochen\b/gi, "")
+    .replace(/\bfür die Form\b/gi, "")
+    .replace(/\bzum Einfetten\b/gi, "")
+    .replace(/\bzum Garnieren\b/gi, "")
+    .replace(/\bzum Servieren\b/gi, "")
+    .replace(/\boptional\b/gi, "")
+    .replace(/\beine Handvoll\b/gi, "")
+    .replace(/\bHandvoll\b/gi, "")
+    .replace(/\betwas\b/gi, "")
+    .replace(/[.,;:!?]+$/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -676,6 +849,8 @@ function normalizeFoodName(foodText) {
     zucker: "Zucker",
     wasser: "Wasser",
     milch: "Milch",
+    sahne: "Sahne",
+    kokosmilch: "Kokosmilch",
     gemüsebrühe: "Gemüsebrühe",
     brühe: "Gemüsebrühe",
     hähnchen: "Hähnchen",
@@ -689,9 +864,26 @@ function normalizeFoodName(foodText) {
     zwiebeln: "Zwiebeln",
     knoblauch: "Knoblauch",
     knoblauchzehe: "Knoblauch",
+    knoblauchzehen: "Knoblauch",
     gurke: "Gurke",
     karotte: "Karotten",
-    karotten: "Karotten"
+    karotten: "Karotten",
+    möhre: "Karotten",
+    möhren: "Karotten",
+    salz: "Salz",
+    pfeffer: "Pfeffer",
+    currypulver: "Currypulver",
+    ingwer: "Ingwer",
+    basilikum: "Basilikum",
+    dill: "Dill",
+    joghurt: "Joghurt",
+    mais: "Mais",
+    erbsen: "Erbsen",
+    blattsalat: "Blattsalat",
+    zitrone: "Zitrone",
+    zitronensaft: "Zitronensaft",
+    hauptzutat: "Hauptzutat",
+    gemüse: "Gemüse"
   };
 
   return synonymMap[clean] || capitalizeFirst(cleanFoodName(foodText));
@@ -871,7 +1063,6 @@ function renderRecipes() {
     : "Nur Favoriten anzeigen";
 
   elements.favoriteFilterButton.classList.toggle("active", showOnlyFavorites);
-
   elements.recipeGrid.innerHTML = "";
 
   if (filteredRecipes.length === 0) {
@@ -1056,7 +1247,6 @@ function renderServingControls() {
 
   elements.currentServings.textContent = activeServings;
   elements.servingInfo.textContent = `Original: ${recipe.servings} ${recipe.servings === 1 ? "Portion" : "Portionen"}`;
-
   elements.decreaseServingsButton.disabled = activeServings <= 1;
   elements.increaseServingsButton.disabled = activeServings >= 20;
 }
@@ -1124,8 +1314,8 @@ function getIngredientNote(original, scaled) {
     notes.push("wird nicht automatisch skaliert");
   }
 
-  if (original.conversionNote) {
-    notes.push(original.conversionNote);
+  if (original.confidence === "low") {
+    notes.push("unsichere Erkennung");
   }
 
   return notes.join(" · ");
@@ -1160,10 +1350,24 @@ function normalizeDisplayUnit(amount, unit) {
     };
   }
 
+  if (unit === "kg" && amount < 1) {
+    return {
+      amount: amount * 1000,
+      unit: "g"
+    };
+  }
+
   if (unit === "ml" && amount >= 1000) {
     return {
       amount: amount / 1000,
       unit: "l"
+    };
+  }
+
+  if (unit === "l" && amount < 1) {
+    return {
+      amount: amount * 1000,
+      unit: "ml"
     };
   }
 
@@ -1185,11 +1389,11 @@ function formatIngredientLabel(ingredient) {
   const unit = ingredient.scaledUnit ?? ingredient.unit;
 
   if (amount === null || amount === undefined || !unit) {
-    if (ingredient.note) {
+    if (ingredient.note && ingredient.food) {
       return `${ingredient.food} ${ingredient.note}`.trim();
     }
 
-    return ingredient.food;
+    return ingredient.food || ingredient.originalText;
   }
 
   return `${formatAmount(amount, unit)} ${unit} ${ingredient.food}`.trim();
@@ -1221,21 +1425,27 @@ function formatAmount(amount, unit) {
 }
 
 function formatFractionAmount(amount) {
-  const rounded = Math.round(amount * 4) / 4;
+  const rounded = Math.round(amount * 12) / 12;
   const whole = Math.floor(rounded);
-  const fraction = rounded - whole;
+  const fraction = Number((rounded - whole).toFixed(4));
 
   const fractionMap = {
     0.25: "1/4",
+    0.3333: "1/3",
     0.5: "1/2",
+    0.6667: "2/3",
     0.75: "3/4"
   };
 
-  if (fractionMap[fraction]) {
-    return whole > 0 ? `${whole} ${fractionMap[fraction]}` : fractionMap[fraction];
+  const matchingFraction = Object.keys(fractionMap).find((key) => {
+    return Math.abs(Number(key) - fraction) < 0.02;
+  });
+
+  if (matchingFraction) {
+    return whole > 0 ? `${whole} ${fractionMap[matchingFraction]}` : fractionMap[matchingFraction];
   }
 
-  return formatGermanNumber(rounded);
+  return formatGermanNumber(Math.round(amount * 10) / 10);
 }
 
 function formatGermanNumber(value) {
@@ -1244,6 +1454,46 @@ function formatGermanNumber(value) {
   }
 
   return String(value).replace(".", ",");
+}
+
+function normalizeShoppingMeasurement(amount, unit) {
+  if (amount === null || amount === undefined || !unit) {
+    return {
+      amount: null,
+      unit: ""
+    };
+  }
+
+  if (unit === "kg") {
+    return {
+      amount: amount * 1000,
+      unit: "g"
+    };
+  }
+
+  if (unit === "l") {
+    return {
+      amount: amount * 1000,
+      unit: "ml"
+    };
+  }
+
+  if (unit === "EL") {
+    return {
+      amount: amount * 3,
+      unit: "TL"
+    };
+  }
+
+  return {
+    amount,
+    unit
+  };
+}
+
+function formatShoppingAmount(amount, unit) {
+  const normalized = normalizeDisplayUnit(amount, unit);
+  return `${formatAmount(normalized.amount, normalized.unit)} ${normalized.unit}`;
 }
 
 function addActiveRecipeToShoppingList() {
@@ -1268,19 +1518,20 @@ function addIngredientToShoppingList(ingredient, recipeId = "") {
   const amount = ingredient.scaledAmount ?? ingredient.amount;
   const unit = ingredient.scaledUnit ?? ingredient.unit;
   const food = ingredient.normalizedFood || ingredient.food;
-  const isAddable = ingredient.scalable && amount !== null && unit;
+  const normalizedMeasurement = normalizeShoppingMeasurement(amount, unit);
+  const isAddable = ingredient.scalable && normalizedMeasurement.amount !== null && normalizedMeasurement.unit;
 
   if (isAddable) {
     const existingItem = shoppingList.find((item) => {
       return (
-        item.food.toLowerCase() === food.toLowerCase() &&
-        item.unit === unit &&
+        item.normalizedFood.toLowerCase() === food.toLowerCase() &&
+        item.unit === normalizedMeasurement.unit &&
         item.note === ""
       );
     });
 
     if (existingItem) {
-      existingItem.amount = Number(existingItem.amount || 0) + amount;
+      existingItem.amount = Number(existingItem.amount || 0) + normalizedMeasurement.amount;
 
       if (recipeId && !existingItem.sourceRecipeIds.includes(recipeId)) {
         existingItem.sourceRecipeIds.push(recipeId);
@@ -1294,8 +1545,8 @@ function addIngredientToShoppingList(ingredient, recipeId = "") {
 
   const duplicateQualitative = shoppingList.find((item) => {
     return (
-      item.food.toLowerCase() === food.toLowerCase() &&
-      item.unit === unit &&
+      item.normalizedFood.toLowerCase() === food.toLowerCase() &&
+      item.unit === normalizedMeasurement.unit &&
       item.note === note
     );
   });
@@ -1311,8 +1562,9 @@ function addIngredientToShoppingList(ingredient, recipeId = "") {
   shoppingList.push({
     id: `shopping-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     food,
-    amount: isAddable ? amount : null,
-    unit: isAddable ? unit : "",
+    normalizedFood: food,
+    amount: isAddable ? normalizedMeasurement.amount : null,
+    unit: isAddable ? normalizedMeasurement.unit : "",
     checked: false,
     note,
     sourceRecipeIds: recipeId ? [recipeId] : []
@@ -1337,7 +1589,7 @@ function renderShoppingList() {
       return a.checked ? 1 : -1;
     }
 
-    return a.food.localeCompare(b.food, "de");
+    return a.normalizedFood.localeCompare(b.normalizedFood, "de");
   });
 
   sortedItems.forEach((item) => {
@@ -1346,7 +1598,7 @@ function renderShoppingList() {
 
     const amountLabel = item.amount === null || !item.unit
       ? ""
-      : `${formatAmount(item.amount, item.unit)} ${item.unit} `;
+      : `${formatShoppingAmount(item.amount, item.unit)} `;
 
     shoppingItem.innerHTML = `
       <input
@@ -1858,6 +2110,7 @@ function simulateUrlRecipeImport(event) {
   const source = getOrCreateSourceFromUrl(parsedUrl);
   const recipeTitle = customTitle || createTitleFromUrl(parsedUrl);
   const recipeId = `url-import-${Date.now()}`;
+  const icon = pickIconFromTitle(recipeTitle);
 
   const simulatedRecipe = {
     id: recipeId,
@@ -1871,8 +2124,8 @@ function simulateUrlRecipeImport(event) {
     servings: 2,
     totalTime: 30,
     tags: ["importiert", "url-import", "metrisch"],
-    icon: pickIconFromTitle(recipeTitle),
-    imageClass: getImageClassFromIcon(pickIconFromTitle(recipeTitle)),
+    icon,
+    imageClass: getImageClassFromIcon(icon),
     isCustom: true,
     isImported: true,
     createdAt: new Date().toISOString(),
@@ -2174,7 +2427,7 @@ function clearUserData() {
 
   showOnlyFavorites = false;
   activeQuickFilter = "all";
-  resetFilters();
+  setQuickFilter("all");
 
   renderRecipes();
   renderShoppingList();
