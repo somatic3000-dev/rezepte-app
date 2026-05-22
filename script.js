@@ -78,6 +78,7 @@ const sortSelect = document.getElementById("sortSelect");
 const categorySelect = document.getElementById("categorySelect");
 const recipeGrid = document.getElementById("recipeGrid");
 const favoriteFilterButton = document.getElementById("favoriteFilterButton");
+const shoppingListButton = document.getElementById("shoppingListButton");
 const resultCount = document.getElementById("resultCount");
 
 const detailModal = document.getElementById("detailModal");
@@ -89,13 +90,27 @@ const modalDifficulty = document.getElementById("modalDifficulty");
 const modalIngredients = document.getElementById("modalIngredients");
 const modalSource = document.getElementById("modalSource");
 const modalFavoriteButton = document.getElementById("modalFavoriteButton");
+const modalShoppingButton = document.getElementById("modalShoppingButton");
+
+const shoppingModal = document.getElementById("shoppingModal");
+const shoppingListItems = document.getElementById("shoppingListItems");
+const clearShoppingListButton = document.getElementById("clearShoppingListButton");
 
 let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+let shoppingList = JSON.parse(localStorage.getItem("shoppingList")) || [];
 let showOnlyFavorites = false;
 let activeRecipeId = null;
 
 function saveFavorites() {
   localStorage.setItem("favorites", JSON.stringify(favorites));
+}
+
+function saveShoppingList() {
+  localStorage.setItem("shoppingList", JSON.stringify(shoppingList));
+}
+
+function createIdFromText(text) {
+  return text.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9äöüß-]/g, "");
 }
 
 function isFavorite(recipeId) {
@@ -123,6 +138,37 @@ function updateModalFavoriteButton(recipeId) {
   } else {
     modalFavoriteButton.textContent = "Als Favorit speichern";
   }
+}
+
+function addRecipeToShoppingList(recipeId) {
+  const recipe = recipes.find((item) => item.id === recipeId);
+
+  if (!recipe) {
+    return;
+  }
+
+  recipe.ingredients.forEach((ingredient) => {
+    const alreadyExists = shoppingList.some(
+      (item) => item.name.toLowerCase() === ingredient.toLowerCase()
+    );
+
+    if (!alreadyExists) {
+      shoppingList.push({
+        id: createIdFromText(ingredient),
+        name: ingredient,
+        checked: false
+      });
+    }
+  });
+
+  saveShoppingList();
+  renderShoppingList();
+
+  modalShoppingButton.textContent = "Zutaten wurden hinzugefügt";
+
+  setTimeout(() => {
+    modalShoppingButton.textContent = "Zutaten zur Einkaufsliste hinzufügen";
+  }, 1500);
 }
 
 function openDetails(recipeId) {
@@ -153,6 +199,10 @@ function openDetails(recipeId) {
     toggleFavorite(recipe.id);
   };
 
+  modalShoppingButton.onclick = function () {
+    addRecipeToShoppingList(recipe.id);
+  };
+
   updateModalFavoriteButton(recipe.id);
 
   detailModal.classList.remove("hidden");
@@ -161,6 +211,83 @@ function openDetails(recipeId) {
 function closeDetails() {
   detailModal.classList.add("hidden");
   activeRecipeId = null;
+}
+
+function openShoppingList() {
+  renderShoppingList();
+  shoppingModal.classList.remove("hidden");
+}
+
+function closeShoppingList() {
+  shoppingModal.classList.add("hidden");
+}
+
+function toggleShoppingItem(itemId) {
+  shoppingList = shoppingList.map((item) => {
+    if (item.id === itemId) {
+      return {
+        ...item,
+        checked: !item.checked
+      };
+    }
+
+    return item;
+  });
+
+  saveShoppingList();
+  renderShoppingList();
+}
+
+function removeShoppingItem(itemId) {
+  shoppingList = shoppingList.filter((item) => item.id !== itemId);
+  saveShoppingList();
+  renderShoppingList();
+}
+
+function clearShoppingList() {
+  shoppingList = [];
+  saveShoppingList();
+  renderShoppingList();
+}
+
+function renderShoppingList() {
+  shoppingListItems.innerHTML = "";
+
+  if (shoppingList.length === 0) {
+    shoppingListItems.innerHTML = `
+      <div class="empty">
+        Deine Einkaufsliste ist noch leer.
+      </div>
+    `;
+    return;
+  }
+
+  shoppingList.forEach((item) => {
+    const shoppingItem = document.createElement("div");
+    shoppingItem.className = "shopping-item";
+
+    shoppingItem.innerHTML = `
+      <input
+        type="checkbox"
+        ${item.checked ? "checked" : ""}
+        onchange="toggleShoppingItem('${item.id}')"
+      />
+
+      <span class="shopping-item-name ${item.checked ? "checked" : ""}">
+        ${item.name}
+      </span>
+
+      <button
+        class="remove-shopping-item"
+        onclick="removeShoppingItem('${item.id}')"
+        aria-label="Zutat entfernen"
+      >
+        ×
+      </button>
+    `;
+
+    shoppingListItems.appendChild(shoppingItem);
+  });
 }
 
 function getFilteredRecipes() {
@@ -213,6 +340,12 @@ function updateToolbar(filteredRecipes) {
   } else {
     favoriteFilterButton.textContent = "Nur Favoriten anzeigen";
     favoriteFilterButton.classList.remove("active");
+  }
+
+  if (shoppingList.length === 1) {
+    shoppingListButton.textContent = "Einkaufsliste öffnen · 1 Zutat";
+  } else {
+    shoppingListButton.textContent = `Einkaufsliste öffnen · ${shoppingList.length} Zutaten`;
   }
 }
 
@@ -291,10 +424,15 @@ favoriteFilterButton.addEventListener("click", function () {
   renderRecipes();
 });
 
+shoppingListButton.addEventListener("click", openShoppingList);
+clearShoppingListButton.addEventListener("click", clearShoppingList);
+
 document.addEventListener("keydown", function (event) {
   if (event.key === "Escape") {
     closeDetails();
+    closeShoppingList();
   }
 });
 
 renderRecipes();
+renderShoppingList();
