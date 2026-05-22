@@ -252,6 +252,8 @@ const elements = {
   categorySelect: document.getElementById("categorySelect"),
   difficultySelect: document.getElementById("difficultySelect"),
   maxTimeSelect: document.getElementById("maxTimeSelect"),
+  sourceFilterSelect: document.getElementById("sourceFilterSelect"),
+  recipeTypeSelect: document.getElementById("recipeTypeSelect"),
   resetFiltersButton: document.getElementById("resetFiltersButton"),
   quickFilterButtons: document.querySelectorAll(".quick-filter"),
   favoriteFilterButton: document.getElementById("favoriteFilterButton"),
@@ -1044,6 +1046,57 @@ function getSafeUrl(url) {
   }
 }
 
+function getRecipeSourceKey(recipe) {
+  return recipe.sourceId || `source-name-${recipe.sourceName}`;
+}
+
+function getRecipeType(recipe) {
+  if (recipe.isImported) {
+    return "imported";
+  }
+
+  if (recipe.isCustom) {
+    return "custom";
+  }
+
+  return "local";
+}
+
+function renderSourceFilterOptions() {
+  const currentValue = elements.sourceFilterSelect.value || "all";
+  const recipes = getAllRecipes();
+  const sourceMap = new Map();
+
+  recipes.forEach((recipe) => {
+    const key = getRecipeSourceKey(recipe);
+    const label = recipe.sourceName || "Unbekannte Quelle";
+
+    if (!sourceMap.has(key)) {
+      sourceMap.set(key, label);
+    }
+  });
+
+  const options = [...sourceMap.entries()]
+    .sort((a, b) => a[1].localeCompare(b[1], "de"))
+    .map(([value, label]) => {
+      return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+    })
+    .join("");
+
+  elements.sourceFilterSelect.innerHTML = `
+    <option value="all">Alle Quellen</option>
+    ${options}
+  `;
+
+  const availableValues = ["all", ...sourceMap.keys()];
+
+  if (availableValues.includes(currentValue)) {
+    elements.sourceFilterSelect.value = currentValue;
+  } else {
+    elements.sourceFilterSelect.value = "all";
+  }
+}
+
 function isFavorite(recipeId) {
   return favorites.includes(recipeId);
 }
@@ -1092,6 +1145,11 @@ function setView(viewName) {
     button.classList.toggle("active", button.dataset.view === viewName);
   });
 
+  if (viewName === "recipes") {
+    renderSourceFilterOptions();
+    renderRecipes();
+  }
+
   if (viewName === "shopping") {
     renderShoppingList();
   }
@@ -1118,6 +1176,8 @@ function getFilteredRecipes() {
   const categoryValue = elements.categorySelect.value;
   const difficultyValue = elements.difficultySelect.value;
   const maxTimeValue = elements.maxTimeSelect.value;
+  const sourceValue = elements.sourceFilterSelect.value;
+  const recipeTypeValue = elements.recipeTypeSelect.value;
 
   let filteredRecipes = recipes.filter((recipe) => {
     const searchableText = [
@@ -1136,6 +1196,8 @@ function getFilteredRecipes() {
     const matchesCategory = categoryValue === "all" || recipe.category === categoryValue;
     const matchesDifficulty = difficultyValue === "all" || recipe.difficulty === difficultyValue;
     const matchesTime = maxTimeValue === "all" || recipe.totalTime <= Number(maxTimeValue);
+    const matchesSource = sourceValue === "all" || getRecipeSourceKey(recipe) === sourceValue;
+    const matchesRecipeType = recipeTypeValue === "all" || getRecipeType(recipe) === recipeTypeValue;
     const matchesFavorite = !showOnlyFavorites || isFavorite(recipe.id);
     const matchesQuickFilter = activeQuickFilter === "all" || searchableText.includes(activeQuickFilter);
 
@@ -1144,6 +1206,8 @@ function getFilteredRecipes() {
       matchesCategory &&
       matchesDifficulty &&
       matchesTime &&
+      matchesSource &&
+      matchesRecipeType &&
       matchesFavorite &&
       matchesQuickFilter
     );
@@ -1277,6 +1341,8 @@ function resetFilters() {
   elements.categorySelect.value = "all";
   elements.difficultySelect.value = "all";
   elements.maxTimeSelect.value = "all";
+  elements.sourceFilterSelect.value = "all";
+  elements.recipeTypeSelect.value = "all";
   showOnlyFavorites = false;
   setQuickFilter("all");
   renderRecipes();
@@ -1983,6 +2049,7 @@ function saveRecipeFromForm(event) {
     editingRecipeId = null;
 
     saveCustomRecipes();
+    renderSourceFilterOptions();
     closeModal("addRecipe");
     renderRecipes();
     showToast("Rezept wurde aktualisiert.");
@@ -2015,6 +2082,7 @@ function saveRecipeFromForm(event) {
 
   customRecipes.push(recipe);
   saveCustomRecipes();
+  renderSourceFilterOptions();
   closeModal("addRecipe");
   renderRecipes();
   showToast("Eigenes Rezept wurde gespeichert.");
@@ -2068,6 +2136,7 @@ function deleteActiveCustomRecipe() {
 
   saveCustomRecipes();
   saveFavorites();
+  renderSourceFilterOptions();
   closeModal("detail");
   renderRecipes();
   showToast("Rezept wurde gelöscht.");
@@ -2158,6 +2227,7 @@ function renderSources() {
     elements.sourceList.appendChild(card);
   });
 
+  renderSourceFilterOptions();
   updateDashboard();
 }
 
@@ -2233,8 +2303,10 @@ function saveSourceFromForm(event) {
 
     editingSourceId = null;
     saveSources();
+    renderSourceFilterOptions();
     closeModal("addSource");
     renderSources();
+    renderRecipes();
     showToast("Quelle wurde aktualisiert.");
     return;
   }
@@ -2253,6 +2325,7 @@ function saveSourceFromForm(event) {
   });
 
   saveSources();
+  renderSourceFilterOptions();
   closeModal("addSource");
   renderSources();
   showToast("Quelle wurde gespeichert.");
@@ -2297,7 +2370,9 @@ function handleSourceAction(action, sourceId) {
 
     sources = sources.filter((item) => item.id !== sourceId);
     saveSources();
+    renderSourceFilterOptions();
     renderSources();
+    renderRecipes();
     showToast("Quelle wurde gelöscht.");
   }
 }
@@ -2401,6 +2476,7 @@ function runImportSimulation() {
     `Quelle „${activeSource.name}“ geprüft, strukturierte Rezeptdaten erkannt, Zutaten analysiert, Mengen metrisch normalisiert.`
   );
 
+  renderSourceFilterOptions();
   renderSources();
   renderRecipes();
   showToast(alreadyImported ? "Import wurde erneut simuliert." : "Beispielrezept wurde importiert.");
@@ -2474,9 +2550,11 @@ function simulateUrlRecipeImport(event) {
     `URL geprüft: ${parsedUrl.hostname}. Strukturierte Rezeptdaten simuliert, Zutaten analysiert, Mengen metrisch normalisiert, Original-Link gespeichert.`
   );
 
+  renderSourceFilterOptions();
   closeModal("importUrl");
   setView("recipes");
   elements.sortSelect.value = "newest";
+  elements.recipeTypeSelect.value = "imported";
   renderRecipes();
 
   showToast("Rezept-URL wurde als Simulation importiert.");
@@ -2767,6 +2845,7 @@ function importData(event) {
     : [];
 
   saveAllData();
+  renderSourceFilterOptions();
   renderRecipes();
   renderShoppingList();
   renderSources();
@@ -2802,7 +2881,10 @@ function clearUserData() {
   showOnlyFavorites = false;
   activeQuickFilter = "all";
   setQuickFilter("all");
+  elements.sourceFilterSelect.value = "all";
+  elements.recipeTypeSelect.value = "all";
 
+  renderSourceFilterOptions();
   renderRecipes();
   renderShoppingList();
   renderSources();
@@ -2870,6 +2952,8 @@ function setupEventListeners() {
   elements.categorySelect.addEventListener("change", renderRecipes);
   elements.difficultySelect.addEventListener("change", renderRecipes);
   elements.maxTimeSelect.addEventListener("change", renderRecipes);
+  elements.sourceFilterSelect.addEventListener("change", renderRecipes);
+  elements.recipeTypeSelect.addEventListener("change", renderRecipes);
   elements.resetFiltersButton.addEventListener("click", resetFilters);
 
   elements.quickFilterButtons.forEach((button) => {
@@ -2995,6 +3079,7 @@ function setupEventListeners() {
 function initializeApp() {
   saveAllData();
 
+  renderSourceFilterOptions();
   setupEventListeners();
   renderRecipes();
   renderShoppingList();
