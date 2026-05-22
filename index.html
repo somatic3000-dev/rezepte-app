@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecipeFinder</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Rezeptsuche</p>
+      <h1>RecipeFinder</h1>
+      <p class="subtitle">
+        Finde schnelle, einfache und passende Rezepte nach Zutaten, Zeit und Kategorie.
+      </p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="controls">
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="Suche nach Pasta, vegan, Reis, schnell..."
+      />
+
+      <select id="sortSelect">
+        <option value="relevance">Sortieren: Relevanz</option>
+        <option value="time">Sortieren: Kochzeit</option>
+        <option value="title">Sortieren: Alphabetisch</option>
+      </select>
+
+      <select id="categorySelect">
+        <option value="all">Alle Kategorien</option>
+        <option value="Hauptgericht">Hauptgericht</option>
+        <option value="Salat">Salat</option>
+        <option value="Suppe">Suppe</option>
+      </select>
+    </section>
+
+    <section id="recipeGrid" class="recipe-grid"></section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
