@@ -934,7 +934,7 @@ a:focus {
 }
 
 .large-modal {
-  width: min(100%, 860px);
+  width: min(100%, 900px);
 }
 
 .modal-close {
@@ -1110,6 +1110,70 @@ a:focus {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.instruction-section {
+  margin-top: 28px;
+}
+
+.instruction-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: cooking-step;
+}
+
+.instruction-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #fffdf8;
+  padding: 16px;
+  counter-increment: cooking-step;
+}
+
+.instruction-item::before {
+  content: counter(cooking-step);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: white;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.instruction-content {
+  display: grid;
+  gap: 6px;
+}
+
+.instruction-content strong {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.instruction-content p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.instruction-empty {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-soft);
+  padding: 16px;
+  color: var(--muted);
+  line-height: 1.55;
 }
 
 .modal-actions {
@@ -1321,5 +1385,16 @@ a:focus {
 
   .button-row {
     flex-direction: column;
+  }
+
+  .instruction-item {
+    grid-template-columns: 38px minmax(0, 1fr);
+    padding: 14px;
+  }
+
+  .instruction-item::before {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
   }
 }
