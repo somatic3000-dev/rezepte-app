@@ -59,6 +59,12 @@ const defaultRecipes = [
       createIngredient("1 Stück Paprika"),
       createIngredient("Salz nach Geschmack"),
       createIngredient("Pfeffer nach Geschmack")
+    ],
+    instructions: [
+      createInstruction("Pasta in reichlich Salzwasser nach Packungsangabe kochen.", 1),
+      createInstruction("Zucchini und Paprika klein schneiden und in Olivenöl anbraten.", 2),
+      createInstruction("Tomaten hinzufügen und alles einige Minuten köcheln lassen.", 3),
+      createInstruction("Pasta mit der Sauce vermengen und mit Salz und Pfeffer abschmecken.", 4)
     ]
   },
   {
@@ -86,6 +92,12 @@ const defaultRecipes = [
       createIngredient("2 EL Olivenöl"),
       createIngredient("1 EL Zitronensaft"),
       createIngredient("Salz nach Geschmack")
+    ],
+    instructions: [
+      createInstruction("Reis gar kochen und anschließend abkühlen lassen.", 1),
+      createInstruction("Gurke und Tomaten klein schneiden.", 2),
+      createInstruction("Reis, Gemüse und Mais in einer Schüssel vermengen.", 3),
+      createInstruction("Olivenöl, Zitronensaft und Salz hinzufügen und gut mischen.", 4)
     ]
   },
   {
@@ -113,6 +125,13 @@ const defaultRecipes = [
       createIngredient("1 EL Currypulver"),
       createIngredient("1 TL Ingwer"),
       createIngredient("Salz nach Geschmack")
+    ],
+    instructions: [
+      createInstruction("Reis nach Packungsangabe kochen.", 1),
+      createInstruction("Kartoffeln und Karotten würfeln.", 2),
+      createInstruction("Gemüse mit Currypulver und Ingwer kurz anrösten.", 3),
+      createInstruction("Kokosmilch hinzufügen und köcheln lassen, bis das Gemüse weich ist.", 4),
+      createInstruction("Mit Salz abschmecken und mit Reis servieren.", 5)
     ]
   },
   {
@@ -139,6 +158,13 @@ const defaultRecipes = [
       createIngredient("250 ml Gemüsebrühe"),
       createIngredient("1 EL Olivenöl"),
       createIngredient("Basilikum nach Geschmack")
+    ],
+    instructions: [
+      createInstruction("Zwiebel und Knoblauch fein schneiden.", 1),
+      createInstruction("Beides in Olivenöl glasig anbraten.", 2),
+      createInstruction("Tomaten und Gemüsebrühe hinzufügen.", 3),
+      createInstruction("Suppe köcheln lassen und anschließend pürieren.", 4),
+      createInstruction("Mit Basilikum abschmecken und servieren.", 5)
     ]
   },
   {
@@ -166,6 +192,13 @@ const defaultRecipes = [
       createIngredient("1 Stück Zwiebel"),
       createIngredient("1 EL Öl zum Anbraten"),
       createIngredient("Salz nach Geschmack")
+    ],
+    instructions: [
+      createInstruction("Reis nach Packungsangabe kochen.", 1),
+      createInstruction("Hähnchen in Stücke schneiden und in Öl anbraten.", 2),
+      createInstruction("Zwiebel und Paprika hinzufügen und mitbraten.", 3),
+      createInstruction("Erbsen und Reis unterheben.", 4),
+      createInstruction("Alles abschmecken und heiß servieren.", 5)
     ]
   },
   {
@@ -192,6 +225,12 @@ const defaultRecipes = [
       createIngredient("1 Bund Dill"),
       createIngredient("Salz nach Geschmack"),
       createIngredient("Pfeffer nach Geschmack")
+    ],
+    instructions: [
+      createInstruction("Gurke waschen und in feine Scheiben schneiden.", 1),
+      createInstruction("Joghurt mit Zitronensaft und Dill verrühren.", 2),
+      createInstruction("Gurke mit dem Dressing mischen.", 3),
+      createInstruction("Mit Salz und Pfeffer abschmecken.", 4)
     ]
   }
 ];
@@ -234,6 +273,7 @@ const elements = {
   increaseServingsButton: document.getElementById("increaseServingsButton"),
   toggleOriginalIngredientsButton: document.getElementById("toggleOriginalIngredientsButton"),
   modalIngredients: document.getElementById("modalIngredients"),
+  modalInstructions: document.getElementById("modalInstructions"),
   modalShoppingButton: document.getElementById("modalShoppingButton"),
   modalFavoriteButton: document.getElementById("modalFavoriteButton"),
   modalDeleteButton: document.getElementById("modalDeleteButton"),
@@ -250,6 +290,7 @@ const elements = {
   newRecipeTime: document.getElementById("newRecipeTime"),
   newRecipeIcon: document.getElementById("newRecipeIcon"),
   newRecipeIngredients: document.getElementById("newRecipeIngredients"),
+  newRecipeInstructions: document.getElementById("newRecipeInstructions"),
   newRecipeTags: document.getElementById("newRecipeTags"),
   newRecipeSourceUrl: document.getElementById("newRecipeSourceUrl"),
 
@@ -364,7 +405,8 @@ function normalizeRecipe(recipe) {
     isCustom: Boolean(recipe.isCustom),
     isImported: Boolean(recipe.isImported),
     createdAt: recipe.createdAt || new Date().toISOString(),
-    ingredients: normalizeIngredients(recipe.ingredients || [])
+    ingredients: normalizeIngredients(recipe.ingredients || []),
+    instructions: normalizeInstructions(recipe.instructions || recipe.steps || [], recipe.title || "dieses Rezept")
   };
 }
 
@@ -421,6 +463,67 @@ function normalizeIngredients(ingredients) {
 
     return createIngredient(String(ingredient));
   });
+}
+
+function createInstruction(text, position = 1) {
+  return {
+    id: `instruction-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    position,
+    text: String(text || "").trim(),
+    timerMinutes: detectTimerMinutes(text),
+    ingredientsUsed: []
+  };
+}
+
+function normalizeInstructions(instructions, recipeTitle = "dieses Rezept") {
+  let normalized = [];
+
+  if (Array.isArray(instructions)) {
+    normalized = instructions
+      .map((instruction, index) => {
+        if (typeof instruction === "string") {
+          return createInstruction(instruction, index + 1);
+        }
+
+        return {
+          id: instruction.id || `instruction-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          position: Number(instruction.position || index + 1),
+          text: instruction.text || instruction.name || "",
+          timerMinutes: instruction.timerMinutes || instruction.timer_minutes || detectTimerMinutes(instruction.text || instruction.name || ""),
+          ingredientsUsed: Array.isArray(instruction.ingredientsUsed)
+            ? instruction.ingredientsUsed
+            : Array.isArray(instruction.ingredients_used)
+              ? instruction.ingredients_used
+              : []
+        };
+      })
+      .filter((instruction) => instruction.text.trim());
+  }
+
+  if (normalized.length === 0) {
+    normalized = createDefaultInstructions(recipeTitle);
+  }
+
+  return normalized.sort((a, b) => a.position - b.position);
+}
+
+function createDefaultInstructions(recipeTitle) {
+  return [
+    createInstruction("Zutaten vorbereiten und nach Bedarf waschen, schneiden oder abwiegen.", 1),
+    createInstruction(`${recipeTitle} nach Geschmack würzen und Schritt für Schritt zubereiten.`, 2),
+    createInstruction("Vor dem Servieren abschmecken und warm oder frisch genießen.", 3)
+  ];
+}
+
+function detectTimerMinutes(text) {
+  const match = String(text || "").match(/(\d+)\s*(minuten|min\.|minute|min)/i);
+
+  if (!match) {
+    return null;
+  }
+
+  const minutes = Number(match[1]);
+  return Number.isFinite(minutes) ? minutes : null;
 }
 
 function createIngredient(line) {
@@ -1015,7 +1118,8 @@ function getFilteredRecipes() {
       recipe.sourceName,
       ...recipe.tags,
       ...recipe.ingredients.map((ingredient) => ingredient.food),
-      ...recipe.ingredients.map((ingredient) => ingredient.normalizedFood)
+      ...recipe.ingredients.map((ingredient) => ingredient.normalizedFood),
+      ...recipe.instructions.map((instruction) => instruction.text)
     ].join(" ").toLowerCase();
 
     const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
@@ -1128,6 +1232,7 @@ function renderRecipes() {
           <span class="tag">${escapeHtml(recipe.totalTime)} Min.</span>
           <span class="tag">${escapeHtml(recipe.servings)} Portionen</span>
           <span class="tag">${escapeHtml(recipe.difficulty)}</span>
+          <span class="tag">${escapeHtml(recipe.instructions.length)} Schritte</span>
           ${recipe.tags.slice(0, 3).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}
         </div>
 
@@ -1235,6 +1340,7 @@ function openRecipeDetails(recipeId) {
   updateModalFavoriteButton(recipe.id);
   renderServingControls();
   renderModalIngredients();
+  renderModalInstructions(recipe);
   openModal(elements.detailModal);
 }
 
@@ -1296,6 +1402,37 @@ function renderModalIngredients() {
     `;
 
     elements.modalIngredients.appendChild(item);
+  });
+}
+
+function renderModalInstructions(recipe) {
+  elements.modalInstructions.innerHTML = "";
+
+  if (!recipe.instructions || recipe.instructions.length === 0) {
+    elements.modalInstructions.innerHTML = `
+      <li class="instruction-empty">
+        Für dieses Rezept ist noch keine Kochanleitung gespeichert.
+      </li>
+    `;
+    return;
+  }
+
+  recipe.instructions.forEach((instruction) => {
+    const item = document.createElement("li");
+    item.className = "instruction-item";
+
+    const timerText = instruction.timerMinutes
+      ? `<p>${escapeHtml(instruction.timerMinutes)} Minuten</p>`
+      : "";
+
+    item.innerHTML = `
+      <div class="instruction-content">
+        <strong>${escapeHtml(instruction.text)}</strong>
+        ${timerText}
+      </div>
+    `;
+
+    elements.modalInstructions.appendChild(item);
   });
 }
 
@@ -1746,6 +1883,7 @@ function addCustomRecipe(event) {
   const title = elements.newRecipeTitle.value.trim();
   const description = elements.newRecipeDescription.value.trim();
   const ingredientLines = splitIngredientLines(elements.newRecipeIngredients.value);
+  const instructionLines = splitInstructionLines(elements.newRecipeInstructions.value);
   const tags = splitTagList(elements.newRecipeTags.value);
   const sourceUrl = elements.newRecipeSourceUrl.value.trim();
   const icon = elements.newRecipeIcon.value;
@@ -1772,7 +1910,10 @@ function addCustomRecipe(event) {
     isCustom: true,
     isImported: false,
     createdAt: new Date().toISOString(),
-    ingredients: ingredientLines.map(createIngredient)
+    ingredients: ingredientLines.map(createIngredient),
+    instructions: instructionLines.length > 0
+      ? instructionLines.map((line, index) => createInstruction(line, index + 1))
+      : createDefaultInstructions(title)
   };
 
   customRecipes.push(recipe);
@@ -1796,6 +1937,13 @@ function splitIngredientLines(value) {
   }
 
   return lines;
+}
+
+function splitInstructionLines(value) {
+  return String(value || "")
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function splitTagList(value) {
@@ -2062,6 +2210,11 @@ function runImportSimulation() {
         createIngredient("2 EL Olivenöl"),
         createIngredient("1 TL Salz"),
         createIngredient("Pfeffer nach Geschmack")
+      ],
+      instructions: [
+        createInstruction("Gemüse waschen, schneiden und auf ein Backblech geben.", 1),
+        createInstruction("Olivenöl und Gewürze darübergeben und alles gut vermengen.", 2),
+        createInstruction("Im Ofen backen, bis das Gemüse weich und leicht gebräunt ist.", 3)
       ]
     });
 
@@ -2129,7 +2282,8 @@ function simulateUrlRecipeImport(event) {
     isCustom: true,
     isImported: true,
     createdAt: new Date().toISOString(),
-    ingredients: createSimulatedIngredientsFromTitle(recipeTitle)
+    ingredients: createSimulatedIngredientsFromTitle(recipeTitle),
+    instructions: createSimulatedInstructionsFromTitle(recipeTitle)
   };
 
   customRecipes.push(simulatedRecipe);
@@ -2308,6 +2462,53 @@ function createSimulatedIngredientsFromTitle(title) {
     createIngredient("1 TL Gewürze"),
     createIngredient("Salz nach Geschmack")
   ];
+}
+
+function createSimulatedInstructionsFromTitle(title) {
+  const lower = title.toLowerCase();
+
+  if (lower.includes("pasta") || lower.includes("nudel") || lower.includes("spaghetti")) {
+    return [
+      createInstruction("Pasta in Salzwasser kochen.", 1),
+      createInstruction("Sauce vorbereiten und kurz köcheln lassen.", 2),
+      createInstruction("Pasta mit der Sauce vermengen und servieren.", 3)
+    ];
+  }
+
+  if (lower.includes("reis")) {
+    return [
+      createInstruction("Reis nach Packungsangabe kochen.", 1),
+      createInstruction("Weitere Zutaten vorbereiten und anbraten.", 2),
+      createInstruction("Alles zusammenführen und abschmecken.", 3)
+    ];
+  }
+
+  if (lower.includes("salat")) {
+    return [
+      createInstruction("Gemüse waschen und schneiden.", 1),
+      createInstruction("Dressing anrühren.", 2),
+      createInstruction("Alles vermengen und frisch servieren.", 3)
+    ];
+  }
+
+  if (lower.includes("suppe")) {
+    return [
+      createInstruction("Zutaten vorbereiten und in einem Topf anbraten.", 1),
+      createInstruction("Flüssigkeit hinzufügen und köcheln lassen.", 2),
+      createInstruction("Nach Wunsch pürieren und abschmecken.", 3)
+    ];
+  }
+
+  if (lower.includes("curry")) {
+    return [
+      createInstruction("Reis oder Beilage vorbereiten.", 1),
+      createInstruction("Gemüse mit Gewürzen anbraten.", 2),
+      createInstruction("Kokosmilch hinzufügen und köcheln lassen.", 3),
+      createInstruction("Abschmecken und servieren.", 4)
+    ];
+  }
+
+  return createDefaultInstructions(title);
 }
 
 function createExportData() {
