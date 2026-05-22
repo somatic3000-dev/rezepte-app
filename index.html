@@ -3,141 +3,584 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>RecipeFinder</title>
+
+  <meta
+    name="description"
+    content="RecipeFinder ist eine moderne Rezept-App mit Rezeptsuche, Portionsskalierung, Einkaufsliste, Quellen-Manager und Import-Simulation."
+  />
+
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
-  <header class="hero">
-    <div class="hero-content">
-      <div>
-        <p class="eyebrow">Intuitive Rezeptsuche</p>
-        <h1>RecipeFinder</h1>
+  <a class="skip-link" href="#recipeLibrary">
+    Direkt zu den Rezepten springen
+  </a>
+
+  <header class="app-header">
+    <nav class="topbar" aria-label="Hauptnavigation">
+      <a class="brand" href="#home" aria-label="RecipeFinder Startseite">
+        <span class="brand-icon">🍽️</span>
+        <span>RecipeFinder</span>
+      </a>
+
+      <div class="topbar-actions">
+        <button class="nav-button active" type="button" data-view="recipes">
+          Rezepte
+        </button>
+
+        <button class="nav-button" type="button" data-view="sources">
+          Quellen
+        </button>
+
+        <button class="nav-button" type="button" data-view="shopping">
+          Einkaufsliste
+        </button>
+
+        <button id="openAddRecipeButton" class="primary-button" type="button">
+          Eigenes Rezept
+        </button>
+      </div>
+    </nav>
+
+    <section id="home" class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Intelligente Rezeptbibliothek</p>
+
+        <h1>Finde, importiere und plane Rezepte ohne Chaos.</h1>
+
         <p class="subtitle">
-          Finde schnelle, einfache und passende Rezepte nach Zutaten, Zeit,
-          Kategorie und Ernährungsform.
+          Sammle Rezepte aus ausgewählten Quellen, analysiere Zutaten,
+          skaliere Portionen logisch und erstelle automatisch Einkaufslisten.
         </p>
+
+        <div class="hero-actions">
+          <a class="primary-link" href="#recipeLibrary">
+            Rezepte ansehen
+          </a>
+
+          <button id="openImportDemoButton" class="secondary-button" type="button">
+            Import testen
+          </button>
+        </div>
       </div>
 
-      <div class="hero-card">
-        <p class="hero-card-label">Heute empfohlen</p>
-        <h2>Veganes Curry</h2>
-        <p>35 Minuten · vegan · wärmend</p>
-      </div>
-    </div>
+      <aside class="hero-card" aria-label="App-Vorteile">
+        <div class="hero-card-icon">🥘</div>
+
+        <p class="hero-card-label">MVP-Ziel</p>
+
+        <h2>Smart Cooking Hub</h2>
+
+        <p>
+          Suche, Quellen, Mengenlogik, Portionsregler und Einkaufsliste in einer App.
+        </p>
+      </aside>
+    </section>
   </header>
 
   <main class="container">
-    <section class="controls">
-      <input
-        id="searchInput"
-        type="search"
-        placeholder="Suche nach Pasta, vegan, Reis, schnell..."
-      />
+    <section class="dashboard" aria-label="App-Übersicht">
+      <article class="stat-card">
+        <span class="stat-label">Rezepte</span>
+        <strong id="totalRecipeCount">0</strong>
+      </article>
 
-      <select id="sortSelect">
-        <option value="relevance">Sortieren: Relevanz</option>
-        <option value="time">Sortieren: Kochzeit</option>
-        <option value="title">Sortieren: Alphabetisch</option>
-      </select>
+      <article class="stat-card">
+        <span class="stat-label">Favoriten</span>
+        <strong id="favoriteCount">0</strong>
+      </article>
 
-      <select id="categorySelect">
-        <option value="all">Alle Kategorien</option>
-        <option value="Hauptgericht">Hauptgericht</option>
-        <option value="Salat">Salat</option>
-        <option value="Suppe">Suppe</option>
-      </select>
+      <article class="stat-card">
+        <span class="stat-label">Quellen</span>
+        <strong id="sourceCount">0</strong>
+      </article>
+
+      <article class="stat-card">
+        <span class="stat-label">Einkaufsliste</span>
+        <strong id="shoppingCount">0</strong>
+      </article>
     </section>
 
-    <section class="quick-filters" aria-label="Schnellfilter">
-      <button class="quick-filter active" data-filter="all">
-        Alle
-      </button>
-      <button class="quick-filter" data-filter="schnell">
-        Schnell
-      </button>
-      <button class="quick-filter" data-filter="vegan">
-        Vegan
-      </button>
-      <button class="quick-filter" data-filter="vegetarisch">
-        Vegetarisch
-      </button>
-      <button class="quick-filter" data-filter="reis">
-        Reis
-      </button>
+    <section id="recipesView" class="app-view active-view">
+      <section id="recipeLibrary" class="search-panel" aria-label="Rezeptsuche und Filter">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Rezeptbibliothek</p>
+            <h2>Was möchtest du kochen?</h2>
+          </div>
+
+          <p id="resultCount" class="result-count">
+            0 Rezepte gefunden
+          </p>
+        </div>
+
+        <div class="search-row">
+          <label class="search-label" for="searchInput">
+            Suche
+            <input
+              id="searchInput"
+              type="search"
+              placeholder="z. B. Pasta, Tomaten, vegan, unter 30 Minuten..."
+              autocomplete="off"
+            />
+          </label>
+
+          <button id="resetFiltersButton" class="reset-button" type="button">
+            Filter zurücksetzen
+          </button>
+        </div>
+
+        <div class="filter-grid">
+          <label>
+            Sortierung
+            <select id="sortSelect">
+              <option value="relevance">Relevanz</option>
+              <option value="time">Kochzeit</option>
+              <option value="title">Alphabetisch</option>
+              <option value="newest">Neueste zuerst</option>
+            </select>
+          </label>
+
+          <label>
+            Kategorie
+            <select id="categorySelect">
+              <option value="all">Alle Kategorien</option>
+              <option value="Hauptgericht">Hauptgericht</option>
+              <option value="Salat">Salat</option>
+              <option value="Suppe">Suppe</option>
+              <option value="Dessert">Dessert</option>
+              <option value="Snack">Snack</option>
+            </select>
+          </label>
+
+          <label>
+            Schwierigkeit
+            <select id="difficultySelect">
+              <option value="all">Alle Schwierigkeitsgrade</option>
+              <option value="Einfach">Einfach</option>
+              <option value="Mittel">Mittel</option>
+              <option value="Schwer">Schwer</option>
+            </select>
+          </label>
+
+          <label>
+            Maximale Kochzeit
+            <select id="maxTimeSelect">
+              <option value="all">Jede Dauer</option>
+              <option value="15">Bis 15 Minuten</option>
+              <option value="30">Bis 30 Minuten</option>
+              <option value="45">Bis 45 Minuten</option>
+              <option value="60">Bis 60 Minuten</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="quick-filters" aria-label="Schnellfilter">
+          <button class="quick-filter active" type="button" data-filter="all">
+            Alle
+          </button>
+
+          <button class="quick-filter" type="button" data-filter="schnell">
+            Schnell
+          </button>
+
+          <button class="quick-filter" type="button" data-filter="vegan">
+            Vegan
+          </button>
+
+          <button class="quick-filter" type="button" data-filter="vegetarisch">
+            Vegetarisch
+          </button>
+
+          <button class="quick-filter" type="button" data-filter="reis">
+            Reis
+          </button>
+
+          <button class="quick-filter" type="button" data-filter="pasta">
+            Pasta
+          </button>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-actions">
+            <button id="favoriteFilterButton" class="toolbar-button" type="button">
+              Nur Favoriten anzeigen
+            </button>
+
+            <button id="openShoppingButton" class="toolbar-button" type="button">
+              Einkaufsliste öffnen
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="recipesHeading">
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">Ergebnisse</p>
+            <h2 id="recipesHeading">Passende Rezepte</h2>
+          </div>
+        </div>
+
+        <div id="recipeGrid" class="recipe-grid"></div>
+      </section>
     </section>
 
-    <section class="toolbar">
-      <div class="toolbar-actions">
-        <button id="favoriteFilterButton" class="toolbar-button">
-          Nur Favoriten anzeigen
-        </button>
+    <section id="sourcesView" class="app-view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Quellen-Manager</p>
+          <h2>Rezeptquellen verwalten</h2>
+        </div>
 
-        <button id="shoppingListButton" class="toolbar-button">
-          Einkaufsliste öffnen
+        <button id="openAddSourceButton" class="primary-button" type="button">
+          Quelle hinzufügen
         </button>
       </div>
 
-      <p id="resultCount" class="result-count">
-        0 Rezepte gefunden
-      </p>
+      <div class="info-card">
+        <h3>Warum Quellen geprüft werden müssen</h3>
+
+        <p>
+          Der spätere echte Import muss prüfen, ob eine Homepage automatischen Zugriff erlaubt.
+          Dieser Browser-Prototyp simuliert den Ablauf: Quelle hinzufügen, prüfen, Import starten,
+          Rezeptdaten analysieren und normalisieren.
+        </p>
+      </div>
+
+      <div id="sourceList" class="source-list"></div>
+
+      <section class="import-panel" aria-labelledby="importHeading">
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">Import-Simulation</p>
+            <h2 id="importHeading">Import-Warteschlange</h2>
+          </div>
+
+          <button id="runImportSimulationButton" class="secondary-button" type="button">
+            Beispiel-Import starten
+          </button>
+        </div>
+
+        <div id="importLog" class="import-log"></div>
+      </section>
     </section>
 
-    <section id="recipeGrid" class="recipe-grid"></section>
+    <section id="shoppingView" class="app-view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Planung</p>
+          <h2>Einkaufsliste</h2>
+        </div>
+
+        <button id="clearShoppingListButton" class="danger-outline-button" type="button">
+          Liste leeren
+        </button>
+      </div>
+
+      <form id="manualShoppingForm" class="inline-form">
+        <label for="manualShoppingInput">
+          Eigene Zutat hinzufügen
+        </label>
+
+        <div class="inline-form-row">
+          <input
+            id="manualShoppingInput"
+            type="text"
+            placeholder="z. B. 500 g Kartoffeln"
+          />
+
+          <button class="primary-button" type="submit">
+            Hinzufügen
+          </button>
+        </div>
+      </form>
+
+      <div id="shoppingListItems" class="shopping-list"></div>
+    </section>
   </main>
 
-  <div id="detailModal" class="modal hidden">
-    <div class="modal-backdrop" onclick="closeDetails()"></div>
+  <div id="detailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-backdrop" data-close-modal="detail"></div>
 
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeDetails()">×</button>
+    <div class="modal-content large-modal">
+      <button class="modal-close" type="button" data-close-modal="detail" aria-label="Details schließen">
+        ×
+      </button>
 
       <div id="modalImage" class="modal-image"></div>
 
-      <p id="modalCategory" class="eyebrow"></p>
-      <h2 id="modalTitle"></h2>
-      <p id="modalDescription"></p>
+      <div class="modal-body">
+        <p id="modalCategory" class="eyebrow"></p>
 
-      <div class="modal-meta">
-        <span id="modalTime" class="tag"></span>
-        <span id="modalDifficulty" class="tag"></span>
+        <h2 id="modalTitle"></h2>
+
+        <p id="modalDescription"></p>
+
+        <div class="modal-meta">
+          <span id="modalTime" class="tag"></span>
+          <span id="modalDifficulty" class="tag"></span>
+          <span id="modalSourceName" class="tag"></span>
+        </div>
+
+        <section class="serving-panel" aria-label="Portionen anpassen">
+          <div>
+            <p class="panel-label">Portionen</p>
+            <p id="servingInfo" class="serving-info">Original: 2 Portionen</p>
+          </div>
+
+          <div class="serving-controls">
+            <button id="decreaseServingsButton" type="button" aria-label="Portionen reduzieren">
+              −
+            </button>
+
+            <strong id="currentServings">2</strong>
+
+            <button id="increaseServingsButton" type="button" aria-label="Portionen erhöhen">
+              +
+            </button>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Normalisierte Zutaten</p>
+              <h3>Zutatenliste</h3>
+            </div>
+
+            <button id="toggleOriginalIngredientsButton" class="small-button" type="button">
+              Original anzeigen
+            </button>
+          </div>
+
+          <ul id="modalIngredients" class="ingredient-list"></ul>
+        </section>
+
+        <div class="modal-actions">
+          <button id="modalShoppingButton" class="success-button" type="button">
+            Zutaten zur Einkaufsliste hinzufügen
+          </button>
+
+          <button id="modalFavoriteButton" class="favorite-action-button" type="button">
+            Als Favorit speichern
+          </button>
+
+          <button id="modalDeleteButton" class="danger-button hidden" type="button">
+            Eigenes Rezept löschen
+          </button>
+
+          <a id="modalSource" class="dark-link-button" href="#" target="_blank" rel="noopener noreferrer">
+            Originalrezept öffnen
+          </a>
+        </div>
       </div>
-
-      <h3>Zutaten</h3>
-      <ul id="modalIngredients"></ul>
-
-      <button id="modalShoppingButton" class="detail-shopping-button">
-        Zutaten zur Einkaufsliste hinzufügen
-      </button>
-
-      <button id="modalFavoriteButton" class="detail-favorite-button">
-        Als Favorit speichern
-      </button>
-
-      <a id="modalSource" class="detail-source-link" href="#" target="_blank">
-        Originalrezept öffnen
-      </a>
     </div>
   </div>
 
-  <div id="shoppingModal" class="modal hidden">
-    <div class="modal-backdrop" onclick="closeShoppingList()"></div>
+  <div id="addRecipeModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="addRecipeTitle">
+    <div class="modal-backdrop" data-close-modal="addRecipe"></div>
 
     <div class="modal-content">
-      <button class="modal-close" onclick="closeShoppingList()">×</button>
+      <button class="modal-close" type="button" data-close-modal="addRecipe" aria-label="Formular schließen">
+        ×
+      </button>
 
-      <p class="eyebrow">Planung</p>
-      <h2>Einkaufsliste</h2>
+      <p class="eyebrow">Eigenes Rezept</p>
+
+      <h2 id="addRecipeTitle">Rezept hinzufügen</h2>
+
       <p>
-        Hier findest du alle Zutaten, die du aus Rezepten hinzugefügt hast.
+        Trage ein eigenes Rezept ein. Zutaten können mit Mengen angegeben werden,
+        zum Beispiel: <strong>200 g Pasta</strong> oder <strong>Salz nach Geschmack</strong>.
       </p>
 
-      <div id="shoppingListItems" class="shopping-list"></div>
+      <form id="addRecipeForm" class="recipe-form">
+        <label>
+          Rezeptname
+          <input
+            id="newRecipeTitle"
+            type="text"
+            placeholder="z. B. Zitronenpasta"
+            required
+          />
+        </label>
 
-      <button id="clearShoppingListButton" class="danger-button">
-        Einkaufsliste leeren
-      </button>
+        <label>
+          Beschreibung
+          <textarea
+            id="newRecipeDescription"
+            placeholder="Kurze Beschreibung des Rezepts"
+            required
+          ></textarea>
+        </label>
+
+        <div class="form-grid">
+          <label>
+            Kategorie
+            <select id="newRecipeCategory">
+              <option value="Hauptgericht">Hauptgericht</option>
+              <option value="Salat">Salat</option>
+              <option value="Suppe">Suppe</option>
+              <option value="Dessert">Dessert</option>
+              <option value="Snack">Snack</option>
+            </select>
+          </label>
+
+          <label>
+            Schwierigkeit
+            <select id="newRecipeDifficulty">
+              <option value="Einfach">Einfach</option>
+              <option value="Mittel">Mittel</option>
+              <option value="Schwer">Schwer</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            Portionen
+            <input
+              id="newRecipeServings"
+              type="number"
+              min="1"
+              max="20"
+              value="2"
+              required
+            />
+          </label>
+
+          <label>
+            Kochzeit in Minuten
+            <input
+              id="newRecipeTime"
+              type="number"
+              min="1"
+              max="999"
+              value="30"
+              required
+            />
+          </label>
+        </div>
+
+        <label>
+          Symbol
+          <select id="newRecipeIcon">
+            <option value="🍽️">🍽️ Allgemein</option>
+            <option value="🍝">🍝 Pasta</option>
+            <option value="🥗">🥗 Salat</option>
+            <option value="🍛">🍛 Curry</option>
+            <option value="🍅">🍅 Suppe</option>
+            <option value="🍚">🍚 Reis</option>
+            <option value="🍰">🍰 Dessert</option>
+            <option value="🥪">🥪 Snack</option>
+          </select>
+        </label>
+
+        <label>
+          Zutaten
+          <textarea
+            id="newRecipeIngredients"
+            placeholder="200 g Pasta&#10;1 EL Olivenöl&#10;Salz nach Geschmack"
+            required
+          ></textarea>
+
+          <span class="form-help">
+            Eine Zutat pro Zeile. Mengen werden im Prototyp einfach analysiert.
+          </span>
+        </label>
+
+        <label>
+          Tags
+          <input
+            id="newRecipeTags"
+            type="text"
+            placeholder="schnell, vegetarisch, pasta"
+          />
+
+          <span class="form-help">
+            Mehrere Tags mit Komma trennen.
+          </span>
+        </label>
+
+        <label>
+          Quellen-Link
+          <input
+            id="newRecipeSourceUrl"
+            type="url"
+            placeholder="https://example.com"
+          />
+
+          <span class="form-help">
+            Optional. Bei eigenen Rezepten kannst du das Feld leer lassen.
+          </span>
+        </label>
+
+        <button class="submit-button" type="submit">
+          Rezept speichern
+        </button>
+      </form>
     </div>
   </div>
+
+  <div id="addSourceModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="addSourceTitle">
+    <div class="modal-backdrop" data-close-modal="addSource"></div>
+
+    <div class="modal-content">
+      <button class="modal-close" type="button" data-close-modal="addSource" aria-label="Quelle schließen">
+        ×
+      </button>
+
+      <p class="eyebrow">Quelle hinzufügen</p>
+
+      <h2 id="addSourceTitle">Neue Homepage eintragen</h2>
+
+      <p>
+        Im Browser-Prototyp wird der Import simuliert. In der späteren Backend-Version
+        werden robots.txt, strukturierte Rezeptdaten, Sitemaps und Importfehler echt geprüft.
+      </p>
+
+      <form id="addSourceForm" class="recipe-form">
+        <label>
+          Quellenname
+          <input
+            id="newSourceName"
+            type="text"
+            placeholder="z. B. Mein Lieblings-Foodblog"
+            required
+          />
+        </label>
+
+        <label>
+          Homepage-URL
+          <input
+            id="newSourceUrl"
+            type="url"
+            placeholder="https://example.com"
+            required
+          />
+        </label>
+
+        <label>
+          Import-Häufigkeit
+          <select id="newSourceFrequency">
+            <option value="Manuell">Manuell</option>
+            <option value="Wöchentlich">Wöchentlich</option>
+            <option value="Täglich">Täglich</option>
+          </select>
+        </label>
+
+        <button class="submit-button" type="submit">
+          Quelle speichern
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
   <script src="script.js"></script>
 </body>
