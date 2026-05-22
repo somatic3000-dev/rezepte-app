@@ -403,6 +403,13 @@ function injectRecipeCardBadgeStyles() {
       white-space: nowrap;
     }
 
+    .feature-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
     .tag.source-tag {
       background: var(--surface-soft, #f7f3ec);
       border-color: var(--border, #ddd0bd);
@@ -417,6 +424,31 @@ function injectRecipeCardBadgeStyles() {
 
     .tag.type-tag {
       font-weight: 800;
+    }
+
+    .tag.feature-tag {
+      background: var(--surface-soft, #f7f3ec);
+      border-color: var(--border, #ddd0bd);
+      color: var(--text-soft, #333333);
+    }
+
+    .tag.feature-fast {
+      background: var(--warning, #fff1c7);
+      border-color: var(--warning-strong, #d6bd8e);
+      color: #5a4313;
+    }
+
+    .tag.feature-vegan,
+    .tag.feature-vegetarian {
+      background: var(--green-soft, var(--success, #dfe5d6));
+      border-color: var(--success-strong, #bdc9ad);
+      color: #405023;
+    }
+
+    .tag.feature-main {
+      background: var(--primary-soft, #f3d7c7);
+      border-color: #e7bea9;
+      color: var(--primary-dark, #8f4028);
     }
 
     @media (max-width: 720px) {
@@ -1163,6 +1195,131 @@ function getRecipeTypeConfig(recipe) {
   };
 }
 
+function getRecipeSearchText(recipe) {
+  return [
+    recipe.title,
+    recipe.description,
+    recipe.category,
+    recipe.difficulty,
+    recipe.sourceName,
+    ...recipe.tags,
+    ...recipe.ingredients.map((ingredient) => ingredient.food),
+    ...recipe.ingredients.map((ingredient) => ingredient.normalizedFood),
+    ...recipe.instructions.map((instruction) => instruction.text)
+  ].join(" ").toLowerCase();
+}
+
+function hasRecipeTag(recipe, tagNames) {
+  const tags = recipe.tags.map((tag) => tag.toLowerCase());
+  return tagNames.some((tagName) => tags.includes(tagName.toLowerCase()));
+}
+
+function recipeTextContains(recipe, words) {
+  const text = getRecipeSearchText(recipe);
+  return words.some((word) => text.includes(word.toLowerCase()));
+}
+
+function hasLikelyAnimalProduct(recipe) {
+  return recipeTextContains(recipe, [
+    "hähnchen",
+    "huhn",
+    "rind",
+    "schwein",
+    "speck",
+    "wurst",
+    "fisch",
+    "lachs",
+    "thunfisch",
+    "garnele",
+    "garnelen",
+    "milch",
+    "joghurt",
+    "käse",
+    "sahne",
+    "butter",
+    "ei",
+    "eier",
+    "honig"
+  ]);
+}
+
+function hasLikelyMeatOrFish(recipe) {
+  return recipeTextContains(recipe, [
+    "hähnchen",
+    "huhn",
+    "rind",
+    "schwein",
+    "speck",
+    "wurst",
+    "fisch",
+    "lachs",
+    "thunfisch",
+    "garnele",
+    "garnelen"
+  ]);
+}
+
+function addFeatureBadge(badges, label, className = "feature-tag") {
+  const alreadyExists = badges.some((badge) => badge.label.toLowerCase() === label.toLowerCase());
+
+  if (!alreadyExists) {
+    badges.push({
+      label,
+      className
+    });
+  }
+}
+
+function getRecipeFeatureBadges(recipe) {
+  const badges = [];
+
+  if (recipe.totalTime <= 15) {
+    addFeatureBadge(badges, "Sehr schnell", "feature-tag feature-fast");
+  } else if (recipe.totalTime <= 30 || hasRecipeTag(recipe, ["schnell"])) {
+    addFeatureBadge(badges, "Schnell", "feature-tag feature-fast");
+  }
+
+  if (hasRecipeTag(recipe, ["vegan"])) {
+    addFeatureBadge(badges, "Vegan", "feature-tag feature-vegan");
+  } else if (hasRecipeTag(recipe, ["vegetarisch"]) || !hasLikelyMeatOrFish(recipe)) {
+    addFeatureBadge(badges, "Vegetarisch", "feature-tag feature-vegetarian");
+  }
+
+  if (recipeTextContains(recipe, ["pasta", "nudeln", "spaghetti"])) {
+    addFeatureBadge(badges, "Pasta", "feature-tag feature-main");
+  }
+
+  if (recipeTextContains(recipe, ["reis"])) {
+    addFeatureBadge(badges, "Reis", "feature-tag feature-main");
+  }
+
+  if (recipe.category === "Suppe" || recipeTextContains(recipe, ["suppe"])) {
+    addFeatureBadge(badges, "Suppe", "feature-tag");
+  }
+
+  if (recipe.category === "Salat" || recipeTextContains(recipe, ["salat"])) {
+    addFeatureBadge(badges, "Salat", "feature-tag");
+  }
+
+  if (recipeTextContains(recipe, ["gemüse", "tomaten", "zucchini", "paprika", "karotten", "kartoffeln"])) {
+    addFeatureBadge(badges, "Gemüse", "feature-tag");
+  }
+
+  if (hasRecipeTag(recipe, ["glutenfrei", "gf"])) {
+    addFeatureBadge(badges, "Glutenfrei", "feature-tag");
+  }
+
+  if (hasRecipeTag(recipe, ["laktosefrei", "milchfrei", "df"])) {
+    addFeatureBadge(badges, "Milchfrei", "feature-tag");
+  }
+
+  if (recipe.ingredients.some((ingredient) => ingredient.amount !== null || ingredient.conversionNote)) {
+    addFeatureBadge(badges, "Metrisch analysiert", "feature-tag");
+  }
+
+  return badges.slice(0, 6);
+}
+
 function renderSourceFilterOptions() {
   const currentValue = elements.sourceFilterSelect.value || "all";
   const recipes = getAllRecipes();
@@ -1281,16 +1438,10 @@ function getFilteredRecipes() {
   const recipeTypeValue = elements.recipeTypeSelect.value;
 
   let filteredRecipes = recipes.filter((recipe) => {
+    const featureBadges = getRecipeFeatureBadges(recipe);
     const searchableText = [
-      recipe.title,
-      recipe.description,
-      recipe.category,
-      recipe.difficulty,
-      recipe.sourceName,
-      ...recipe.tags,
-      ...recipe.ingredients.map((ingredient) => ingredient.food),
-      ...recipe.ingredients.map((ingredient) => ingredient.normalizedFood),
-      ...recipe.instructions.map((instruction) => instruction.text)
+      getRecipeSearchText(recipe),
+      ...featureBadges.map((badge) => badge.label)
     ].join(" ").toLowerCase();
 
     const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
@@ -1358,6 +1509,7 @@ function renderRecipes() {
     const sourceUrl = getSafeUrl(recipe.sourceUrl);
     const recipeTypeConfig = getRecipeTypeConfig(recipe);
     const sourceName = recipe.sourceName || "Unbekannte Quelle";
+    const featureBadges = getRecipeFeatureBadges(recipe);
 
     const sourceLink = sourceUrl === "#"
       ? ""
@@ -1405,6 +1557,10 @@ function renderRecipes() {
         <div class="recipe-card-source-row">
           <span>Quelle</span>
           <strong>${escapeHtml(sourceName)}</strong>
+        </div>
+
+        <div class="feature-badges" aria-label="Rezepteigenschaften">
+          ${featureBadges.map((badge) => `<span class="tag ${escapeHtml(badge.className)}">${escapeHtml(badge.label)}</span>`).join("")}
         </div>
 
         <div class="meta">
