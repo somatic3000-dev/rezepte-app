@@ -8,7 +8,7 @@
 
   <meta
     name="description"
-    content="RecipeFinder ist eine moderne Rezept-App mit Rezeptsuche, Portionsskalierung, Einkaufsliste, Quellen-Manager, URL-Import-Simulation, Kochanleitungen, Rezeptbearbeitung, Quellenbearbeitung und Datenverwaltung."
+    content="RecipeFinder ist eine moderne Rezept-App mit Rezeptsuche, erweiterten Filtern, Portionsskalierung, Einkaufsliste, Quellen-Manager, URL-Import-Simulation, Kochanleitungen, Rezeptbearbeitung, Quellenbearbeitung und Datenverwaltung."
   />
 
   <link rel="stylesheet" href="styles.css" />
@@ -182,6 +182,23 @@
               <option value="30">Bis 30 Minuten</option>
               <option value="45">Bis 45 Minuten</option>
               <option value="60">Bis 60 Minuten</option>
+            </select>
+          </label>
+
+          <label>
+            Quelle
+            <select id="sourceFilterSelect">
+              <option value="all">Alle Quellen</option>
+            </select>
+          </label>
+
+          <label>
+            Rezepttyp
+            <select id="recipeTypeSelect">
+              <option value="all">Alle Rezepttypen</option>
+              <option value="custom">Eigene Rezepte</option>
+              <option value="imported">Importierte Rezepte</option>
+              <option value="local">Lokale Beispielrezepte</option>
             </select>
           </label>
         </div>
