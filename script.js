@@ -268,6 +268,14 @@ const elements = {
   runImportSimulationButton: document.getElementById("runImportSimulationButton"),
   openImportDemoButton: document.getElementById("openImportDemoButton"),
 
+  openUrlImportButton: document.getElementById("openUrlImportButton"),
+  openUrlImportButtonSecondary: document.getElementById("openUrlImportButtonSecondary"),
+  openUrlImportButtonSources: document.getElementById("openUrlImportButtonSources"),
+  importUrlModal: document.getElementById("importUrlModal"),
+  importUrlForm: document.getElementById("importUrlForm"),
+  recipeUrlInput: document.getElementById("recipeUrlInput"),
+  recipeUrlTitleInput: document.getElementById("recipeUrlTitleInput"),
+
   toast: document.getElementById("toast")
 };
 
@@ -860,10 +868,10 @@ function renderRecipes() {
         </a>
       `;
 
-    const recipeTypeTag = recipe.isCustom
-      ? `<span class="tag user-tag">Eigenes Rezept</span>`
-      : recipe.isImported
-        ? `<span class="tag import-tag">Importiert</span>`
+    const recipeTypeTag = recipe.isImported
+      ? `<span class="tag import-tag">Importiert</span>`
+      : recipe.isCustom
+        ? `<span class="tag user-tag">Eigenes Rezept</span>`
         : `<span class="tag">Lokal</span>`;
 
     const ingredientPreview = recipe.ingredients
@@ -981,10 +989,11 @@ function openRecipeDetails(recipeId) {
 
   elements.modalImage.textContent = recipe.icon;
   elements.modalImage.className = `modal-image ${recipe.imageClass}`;
-  elements.modalCategory.textContent = recipe.isCustom
-    ? `${recipe.category} · Eigenes Rezept`
-    : recipe.isImported
-      ? `${recipe.category} · Importiert`
+
+  elements.modalCategory.textContent = recipe.isImported
+    ? `${recipe.category} · Importiert`
+    : recipe.isCustom
+      ? `${recipe.category} · Eigenes Rezept`
       : recipe.category;
 
   elements.modalTitle.textContent = recipe.title;
@@ -1420,7 +1429,8 @@ function closeModal(modalName) {
   const modalMap = {
     detail: elements.detailModal,
     addRecipe: elements.addRecipeModal,
-    addSource: elements.addSourceModal
+    addSource: elements.addSourceModal,
+    importUrl: elements.importUrlModal
   };
 
   const modal = modalMap[modalName];
@@ -1440,6 +1450,7 @@ function closeAllModals() {
   elements.detailModal.classList.add("hidden");
   elements.addRecipeModal.classList.add("hidden");
   elements.addSourceModal.classList.add("hidden");
+  elements.importUrlModal.classList.add("hidden");
   document.body.classList.remove("modal-open");
 }
 
@@ -1523,7 +1534,7 @@ function deleteActiveCustomRecipe() {
     return;
   }
 
-  const shouldDelete = confirm("Möchtest du dieses eigene Rezept wirklich löschen?");
+  const shouldDelete = confirm("Möchtest du dieses Rezept wirklich löschen?");
 
   if (!shouldDelete) {
     return;
@@ -1536,7 +1547,7 @@ function deleteActiveCustomRecipe() {
   saveFavorites();
   closeModal("detail");
   renderRecipes();
-  showToast("Eigenes Rezept wurde gelöscht.");
+  showToast("Rezept wurde gelöscht.");
 }
 
 function renderSources() {
@@ -1702,7 +1713,7 @@ function addImportLog(title, details) {
     createdAt: new Date().toISOString()
   });
 
-  importLog = importLog.slice(0, 8);
+  importLog = importLog.slice(0, 10);
   saveImportLog();
   renderImportLog();
 }
@@ -1713,7 +1724,7 @@ function renderImportLog() {
   if (importLog.length === 0) {
     elements.importLog.innerHTML = `
       <div class="import-log-item">
-        Noch kein Import gestartet. Starte einen Beispiel-Import, um den geplanten Ablauf zu sehen.
+        Noch kein Import gestartet. Starte einen Beispiel-Import oder importiere eine Rezept-URL.
       </div>
     `;
     return;
@@ -1792,6 +1803,234 @@ function runImportSimulation() {
   showToast(alreadyImported ? "Import wurde erneut simuliert." : "Beispielrezept wurde importiert.");
 }
 
+function openUrlImportModal() {
+  elements.importUrlForm.reset();
+  openModal(elements.importUrlModal);
+  elements.recipeUrlInput.focus();
+}
+
+function simulateUrlRecipeImport(event) {
+  event.preventDefault();
+
+  const rawUrl = elements.recipeUrlInput.value.trim();
+  const customTitle = elements.recipeUrlTitleInput.value.trim();
+
+  let parsedUrl;
+
+  try {
+    parsedUrl = new URL(rawUrl);
+  } catch {
+    showToast("Bitte gib eine gültige URL ein.");
+    return;
+  }
+
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    showToast("Nur http- und https-URLs werden unterstützt.");
+    return;
+  }
+
+  const source = getOrCreateSourceFromUrl(parsedUrl);
+  const recipeTitle = customTitle || createTitleFromUrl(parsedUrl);
+  const recipeId = `url-import-${Date.now()}`;
+
+  const simulatedRecipe = {
+    id: recipeId,
+    title: recipeTitle,
+    description: "Simuliert aus einer Rezept-URL importiertes Rezept. Der echte Webseitenabruf wird später über ein Backend umgesetzt.",
+    sourceId: source.id,
+    sourceName: source.name,
+    sourceUrl: parsedUrl.href,
+    category: "Hauptgericht",
+    difficulty: "Einfach",
+    servings: 2,
+    totalTime: 30,
+    tags: ["importiert", "url-import", "metrisch"],
+    icon: pickIconFromTitle(recipeTitle),
+    imageClass: getImageClassFromIcon(pickIconFromTitle(recipeTitle)),
+    isCustom: true,
+    isImported: true,
+    createdAt: new Date().toISOString(),
+    ingredients: createSimulatedIngredientsFromTitle(recipeTitle)
+  };
+
+  customRecipes.push(simulatedRecipe);
+  source.importedRecipeCount += 1;
+  source.lastCheckedAt = "Gerade eben";
+  source.robotsAllowed = true;
+  source.parserType = "simulierter JSON-LD Recipe Import";
+  source.errorMessage = "";
+
+  saveSources();
+  saveCustomRecipes();
+
+  addImportLog(
+    `URL-Import simuliert: „${recipeTitle}“`,
+    `URL geprüft: ${parsedUrl.hostname}. Strukturierte Rezeptdaten simuliert, Zutaten analysiert, Mengen metrisch normalisiert, Original-Link gespeichert.`
+  );
+
+  closeModal("importUrl");
+  setView("recipes");
+  elements.sortSelect.value = "newest";
+  renderRecipes();
+
+  showToast("Rezept-URL wurde als Simulation importiert.");
+}
+
+function getOrCreateSourceFromUrl(parsedUrl) {
+  const hostname = parsedUrl.hostname.replace(/^www\./, "");
+  const existingSource = sources.find((source) => {
+    try {
+      const sourceUrl = new URL(source.baseUrl);
+      return sourceUrl.hostname.replace(/^www\./, "") === hostname;
+    } catch {
+      return source.baseUrl.includes(hostname);
+    }
+  });
+
+  if (existingSource) {
+    return existingSource;
+  }
+
+  const newSource = {
+    id: `source-${Date.now()}`,
+    name: hostname,
+    baseUrl: parsedUrl.origin,
+    status: "Aktiv",
+    robotsAllowed: true,
+    parserType: "simulierte Prüfung",
+    importFrequency: "Manuell",
+    importedRecipeCount: 0,
+    lastCheckedAt: "Gerade eben",
+    errorMessage: ""
+  };
+
+  sources.push(newSource);
+  saveSources();
+
+  return newSource;
+}
+
+function createTitleFromUrl(parsedUrl) {
+  const pathParts = parsedUrl.pathname
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const lastPart = pathParts[pathParts.length - 1] || parsedUrl.hostname;
+
+  const cleaned = lastPart
+    .replace(/\.(html|htm|php)$/i, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\d+/g, "")
+    .trim();
+
+  if (!cleaned) {
+    return "Importiertes Rezept";
+  }
+
+  return cleaned
+    .split(" ")
+    .filter(Boolean)
+    .map(capitalizeFirst)
+    .join(" ");
+}
+
+function pickIconFromTitle(title) {
+  const lower = title.toLowerCase();
+
+  if (lower.includes("pasta") || lower.includes("nudel") || lower.includes("spaghetti")) {
+    return "🍝";
+  }
+
+  if (lower.includes("salat")) {
+    return "🥗";
+  }
+
+  if (lower.includes("curry")) {
+    return "🍛";
+  }
+
+  if (lower.includes("suppe") || lower.includes("tomate")) {
+    return "🍅";
+  }
+
+  if (lower.includes("reis")) {
+    return "🍚";
+  }
+
+  if (lower.includes("kuchen") || lower.includes("dessert")) {
+    return "🍰";
+  }
+
+  if (lower.includes("sandwich") || lower.includes("snack")) {
+    return "🥪";
+  }
+
+  return "🍽️";
+}
+
+function createSimulatedIngredientsFromTitle(title) {
+  const lower = title.toLowerCase();
+
+  if (lower.includes("pasta") || lower.includes("nudel") || lower.includes("spaghetti")) {
+    return [
+      createIngredient("200 g Pasta"),
+      createIngredient("250 g Tomaten"),
+      createIngredient("1 EL Olivenöl"),
+      createIngredient("1 Stück Knoblauchzehe"),
+      createIngredient("Salz nach Geschmack")
+    ];
+  }
+
+  if (lower.includes("reis")) {
+    return [
+      createIngredient("200 g Reis"),
+      createIngredient("250 g Gemüse"),
+      createIngredient("1 EL Öl zum Anbraten"),
+      createIngredient("1 TL Gewürze"),
+      createIngredient("Salz nach Geschmack")
+    ];
+  }
+
+  if (lower.includes("salat")) {
+    return [
+      createIngredient("1 Stück Gurke"),
+      createIngredient("200 g Tomaten"),
+      createIngredient("100 g Blattsalat"),
+      createIngredient("2 EL Olivenöl"),
+      createIngredient("1 EL Zitronensaft")
+    ];
+  }
+
+  if (lower.includes("suppe")) {
+    return [
+      createIngredient("500 g Gemüse"),
+      createIngredient("500 ml Gemüsebrühe"),
+      createIngredient("1 Stück Zwiebel"),
+      createIngredient("1 EL Olivenöl"),
+      createIngredient("Pfeffer nach Geschmack")
+    ];
+  }
+
+  if (lower.includes("curry")) {
+    return [
+      createIngredient("400 ml Kokosmilch"),
+      createIngredient("250 g Gemüse"),
+      createIngredient("200 g Reis"),
+      createIngredient("1 EL Currypulver"),
+      createIngredient("Salz nach Geschmack")
+    ];
+  }
+
+  return [
+    createIngredient("250 g Hauptzutat"),
+    createIngredient("200 g Gemüse"),
+    createIngredient("1 EL Olivenöl"),
+    createIngredient("1 TL Gewürze"),
+    createIngredient("Salz nach Geschmack")
+  ];
+}
+
 function updateDashboard() {
   const allRecipes = getAllRecipes();
 
@@ -1815,6 +2054,11 @@ function setupEventListeners() {
 
   elements.openAddRecipeButton.addEventListener("click", openAddRecipeModal);
   elements.openAddSourceButton.addEventListener("click", openAddSourceModal);
+
+  elements.openUrlImportButton.addEventListener("click", openUrlImportModal);
+  elements.openUrlImportButtonSecondary.addEventListener("click", openUrlImportModal);
+  elements.openUrlImportButtonSources.addEventListener("click", openUrlImportModal);
+  elements.importUrlForm.addEventListener("submit", simulateUrlRecipeImport);
 
   elements.searchInput.addEventListener("input", renderRecipes);
   elements.sortSelect.addEventListener("change", renderRecipes);
