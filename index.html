@@ -8,7 +8,7 @@
 
   <meta
     name="description"
-    content="RecipeFinder ist eine moderne Rezept-App mit Rezeptsuche, Portionsskalierung, Einkaufsliste, Quellen-Manager und Import-Simulation."
+    content="RecipeFinder ist eine moderne Rezept-App mit Rezeptsuche, Portionsskalierung, Einkaufsliste, Quellen-Manager, URL-Import-Simulation und Datenverwaltung."
   />
 
   <link rel="stylesheet" href="styles.css" />
@@ -37,6 +37,10 @@
 
         <button class="nav-button" type="button" data-view="shopping">
           Einkaufsliste
+        </button>
+
+        <button class="nav-button" type="button" data-view="settings">
+          Daten
         </button>
 
         <button id="openUrlImportButton" class="ghost-button" type="button">
@@ -314,6 +318,104 @@
       </form>
 
       <div id="shoppingListItems" class="shopping-list"></div>
+    </section>
+
+    <section id="settingsView" class="app-view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Datenverwaltung</p>
+          <h2>Export, Import und Zurücksetzen</h2>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <article class="settings-card">
+          <h3>Daten exportieren</h3>
+
+          <p>
+            Exportiere deine lokalen Prototyp-Daten als JSON. Enthalten sind eigene Rezepte,
+            Favoriten, Einkaufsliste, Quellen und Importprotokoll.
+          </p>
+
+          <div class="button-row">
+            <button id="exportDataButton" class="primary-button" type="button">
+              Export erzeugen
+            </button>
+
+            <button id="copyExportButton" class="secondary-button" type="button">
+              Export kopieren
+            </button>
+          </div>
+
+          <textarea
+            id="exportDataOutput"
+            class="data-textarea"
+            placeholder="Hier erscheint dein Datenexport."
+            readonly
+          ></textarea>
+        </article>
+
+        <article class="settings-card">
+          <h3>Daten importieren</h3>
+
+          <p>
+            Füge hier einen zuvor exportierten JSON-Text ein. Bestehende lokale Daten werden
+            dadurch ersetzt.
+          </p>
+
+          <form id="importDataForm" class="recipe-form">
+            <label>
+              JSON-Daten
+              <textarea
+                id="importDataInput"
+                class="data-textarea"
+                placeholder="{ ... }"
+                required
+              ></textarea>
+            </label>
+
+            <button class="submit-button" type="submit">
+              Daten importieren
+            </button>
+          </form>
+        </article>
+
+        <article class="settings-card danger-zone">
+          <h3>Zurücksetzen</h3>
+
+          <p>
+            Diese Aktionen betreffen nur die Daten in deinem aktuellen Browser. GitHub-Dateien
+            werden dadurch nicht verändert.
+          </p>
+
+          <div class="button-column">
+            <button id="clearUserDataButton" class="danger-outline-button" type="button">
+              Eigene Daten löschen
+            </button>
+
+            <button id="resetDemoDataButton" class="danger-button" type="button">
+              Prototyp vollständig zurücksetzen
+            </button>
+          </div>
+        </article>
+
+        <article class="settings-card">
+          <h3>Speicherort</h3>
+
+          <p>
+            Der aktuelle Prototyp nutzt <strong>localStorage</strong>. Das bedeutet:
+            Deine Daten liegen lokal in diesem Browser und werden nicht zwischen Geräten synchronisiert.
+          </p>
+
+          <ul class="settings-list">
+            <li>Eigene Rezepte: lokal gespeichert</li>
+            <li>Favoriten: lokal gespeichert</li>
+            <li>Einkaufsliste: lokal gespeichert</li>
+            <li>Quellen: lokal gespeichert</li>
+            <li>Importprotokoll: lokal gespeichert</li>
+          </ul>
+        </article>
+      </div>
     </section>
   </main>
 
