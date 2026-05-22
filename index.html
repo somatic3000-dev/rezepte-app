@@ -39,6 +39,10 @@
           Einkaufsliste
         </button>
 
+        <button id="openUrlImportButton" class="ghost-button" type="button">
+          Rezept-URL importieren
+        </button>
+
         <button id="openAddRecipeButton" class="primary-button" type="button">
           Eigenes Rezept
         </button>
@@ -62,7 +66,7 @@
           </a>
 
           <button id="openImportDemoButton" class="secondary-button" type="button">
-            Import testen
+            Beispiel-Import testen
           </button>
         </div>
       </div>
@@ -213,6 +217,10 @@
             <button id="openShoppingButton" class="toolbar-button" type="button">
               Einkaufsliste öffnen
             </button>
+
+            <button id="openUrlImportButtonSecondary" class="toolbar-button" type="button">
+              Rezept-URL importieren
+            </button>
           </div>
         </div>
       </section>
@@ -246,8 +254,8 @@
 
         <p>
           Der spätere echte Import muss prüfen, ob eine Homepage automatischen Zugriff erlaubt.
-          Dieser Browser-Prototyp simuliert den Ablauf: Quelle hinzufügen, prüfen, Import starten,
-          Rezeptdaten analysieren und normalisieren.
+          Dieser Browser-Prototyp simuliert den Ablauf: Quelle hinzufügen, URL prüfen,
+          Rezeptdaten erkennen, Zutaten analysieren und Mengen normalisieren.
         </p>
       </div>
 
@@ -260,9 +268,15 @@
             <h2 id="importHeading">Import-Warteschlange</h2>
           </div>
 
-          <button id="runImportSimulationButton" class="secondary-button" type="button">
-            Beispiel-Import starten
-          </button>
+          <div class="toolbar-actions">
+            <button id="openUrlImportButtonSources" class="secondary-button" type="button">
+              Rezept-URL importieren
+            </button>
+
+            <button id="runImportSimulationButton" class="secondary-button" type="button">
+              Beispiel-Import starten
+            </button>
+          </div>
         </div>
 
         <div id="importLog" class="import-log"></div>
@@ -575,6 +589,62 @@
 
         <button class="submit-button" type="submit">
           Quelle speichern
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="importUrlModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="importUrlTitle">
+    <div class="modal-backdrop" data-close-modal="importUrl"></div>
+
+    <div class="modal-content">
+      <button class="modal-close" type="button" data-close-modal="importUrl" aria-label="URL-Import schließen">
+        ×
+      </button>
+
+      <p class="eyebrow">Rezept-URL importieren</p>
+
+      <h2 id="importUrlTitle">Rezept aus URL hinzufügen</h2>
+
+      <p>
+        In diesem Browser-Prototyp wird der Import simuliert. Die App prüft die URL,
+        erstellt einen nachvollziehbaren Importstatus und speichert ein normalisiertes
+        Beispielrezept mit Original-Link.
+      </p>
+
+      <div class="notice-card">
+        <strong>Hinweis:</strong>
+        Echte Webseiten können erst mit einem Backend zuverlässig geladen werden.
+        Dafür braucht die App später einen Import-Service, der CORS, robots.txt,
+        strukturierte Rezeptdaten und rechtliche Vorgaben berücksichtigt.
+      </div>
+
+      <form id="importUrlForm" class="recipe-form">
+        <label>
+          Rezept-URL
+          <input
+            id="recipeUrlInput"
+            type="url"
+            placeholder="https://example.com/mein-rezept"
+            required
+          />
+        </label>
+
+        <label>
+          Gewünschter Rezeptname
+          <input
+            id="recipeUrlTitleInput"
+            type="text"
+            placeholder="Optional, z. B. Cremige Pasta"
+          />
+
+          <span class="form-help">
+            Wenn du nichts eingibst, erzeugt die App einen passenden Namen aus der URL.
+          </span>
+        </label>
+
+        <button class="submit-button" type="submit">
+          URL-Import simulieren
         </button>
       </form>
     </div>
