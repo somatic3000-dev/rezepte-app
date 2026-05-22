@@ -201,6 +201,7 @@ const elements = {
   recipesView: document.getElementById("recipesView"),
   sourcesView: document.getElementById("sourcesView"),
   shoppingView: document.getElementById("shoppingView"),
+  settingsView: document.getElementById("settingsView"),
 
   totalRecipeCount: document.getElementById("totalRecipeCount"),
   favoriteCount: document.getElementById("favoriteCount"),
@@ -276,6 +277,14 @@ const elements = {
   recipeUrlInput: document.getElementById("recipeUrlInput"),
   recipeUrlTitleInput: document.getElementById("recipeUrlTitleInput"),
 
+  exportDataButton: document.getElementById("exportDataButton"),
+  copyExportButton: document.getElementById("copyExportButton"),
+  exportDataOutput: document.getElementById("exportDataOutput"),
+  importDataForm: document.getElementById("importDataForm"),
+  importDataInput: document.getElementById("importDataInput"),
+  clearUserDataButton: document.getElementById("clearUserDataButton"),
+  resetDemoDataButton: document.getElementById("resetDemoDataButton"),
+
   toast: document.getElementById("toast")
 };
 
@@ -306,6 +315,10 @@ function loadJson(key, fallback) {
 
 function saveJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 function escapeHtml(value) {
@@ -750,11 +763,20 @@ function saveImportLog() {
   saveJson(STORAGE_KEYS.importLog, importLog);
 }
 
+function saveAllData() {
+  saveFavorites();
+  saveCustomRecipes();
+  saveShoppingList();
+  saveSources();
+  saveImportLog();
+}
+
 function setView(viewName) {
   const viewMap = {
     recipes: elements.recipesView,
     sources: elements.sourcesView,
-    shopping: elements.shoppingView
+    shopping: elements.shoppingView,
+    settings: elements.settingsView
   };
 
   Object.entries(viewMap).forEach(([name, view]) => {
@@ -772,6 +794,10 @@ function setView(viewName) {
   if (viewName === "sources") {
     renderSources();
     renderImportLog();
+  }
+
+  if (viewName === "settings") {
+    updateDashboard();
   }
 
   window.scrollTo({
@@ -2031,6 +2057,158 @@ function createSimulatedIngredientsFromTitle(title) {
   ];
 }
 
+function createExportData() {
+  return {
+    app: "RecipeFinder",
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    data: {
+      customRecipes,
+      favorites,
+      shoppingList,
+      sources,
+      importLog
+    }
+  };
+}
+
+function exportData() {
+  const exportPayload = createExportData();
+  elements.exportDataOutput.value = JSON.stringify(exportPayload, null, 2);
+  showToast("Export wurde erzeugt.");
+}
+
+async function copyExportData() {
+  if (!elements.exportDataOutput.value.trim()) {
+    exportData();
+  }
+
+  const text = elements.exportDataOutput.value;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Export wurde kopiert.");
+  } catch {
+    elements.exportDataOutput.focus();
+    elements.exportDataOutput.select();
+    document.execCommand("copy");
+    showToast("Export wurde markiert und kopiert.");
+  }
+}
+
+function importData(event) {
+  event.preventDefault();
+
+  let parsed;
+
+  try {
+    parsed = JSON.parse(elements.importDataInput.value);
+  } catch {
+    showToast("Der Import ist kein gültiges JSON.");
+    return;
+  }
+
+  if (!parsed || typeof parsed !== "object" || !parsed.data) {
+    showToast("Die JSON-Struktur passt nicht zu RecipeFinder.");
+    return;
+  }
+
+  const shouldImport = confirm("Bestehende lokale Daten werden ersetzt. Möchtest du fortfahren?");
+
+  if (!shouldImport) {
+    return;
+  }
+
+  customRecipes = Array.isArray(parsed.data.customRecipes)
+    ? parsed.data.customRecipes.map(normalizeRecipe)
+    : [];
+
+  favorites = Array.isArray(parsed.data.favorites)
+    ? parsed.data.favorites.filter((item) => typeof item === "string")
+    : [];
+
+  shoppingList = Array.isArray(parsed.data.shoppingList)
+    ? parsed.data.shoppingList.map(normalizeShoppingItem)
+    : [];
+
+  sources = Array.isArray(parsed.data.sources)
+    ? parsed.data.sources.map(normalizeSource)
+    : deepClone(defaultSources).map(normalizeSource);
+
+  importLog = Array.isArray(parsed.data.importLog)
+    ? parsed.data.importLog
+    : [];
+
+  saveAllData();
+  renderRecipes();
+  renderShoppingList();
+  renderSources();
+  renderImportLog();
+  updateDashboard();
+
+  elements.importDataInput.value = "";
+  elements.exportDataOutput.value = "";
+
+  showToast("Daten wurden importiert.");
+}
+
+function clearUserData() {
+  const shouldClear = confirm(
+    "Möchtest du eigene Rezepte, Favoriten, Einkaufsliste, Quellen und Importprotokoll löschen?"
+  );
+
+  if (!shouldClear) {
+    return;
+  }
+
+  customRecipes = [];
+  favorites = [];
+  shoppingList = [];
+  sources = deepClone(defaultSources).map(normalizeSource);
+  importLog = [];
+
+  saveAllData();
+
+  elements.exportDataOutput.value = "";
+  elements.importDataInput.value = "";
+
+  showOnlyFavorites = false;
+  activeQuickFilter = "all";
+  resetFilters();
+
+  renderRecipes();
+  renderShoppingList();
+  renderSources();
+  renderImportLog();
+  updateDashboard();
+
+  showToast("Eigene Daten wurden gelöscht.");
+}
+
+function resetDemoData() {
+  const shouldReset = confirm(
+    "Möchtest du den Prototyp vollständig zurücksetzen? Alle lokalen Daten werden gelöscht."
+  );
+
+  if (!shouldReset) {
+    return;
+  }
+
+  Object.values(STORAGE_KEYS).forEach((key) => {
+    localStorage.removeItem(key);
+  });
+
+  localStorage.removeItem("customRecipes");
+  localStorage.removeItem("favorites");
+  localStorage.removeItem("shoppingList");
+
+  showToast("Prototyp wird zurückgesetzt.");
+
+  window.setTimeout(() => {
+    window.location.reload();
+  }, 700);
+}
+
 function updateDashboard() {
   const allRecipes = getAllRecipes();
 
@@ -2163,6 +2341,12 @@ function setupEventListeners() {
 
   elements.runImportSimulationButton.addEventListener("click", runImportSimulation);
 
+  elements.exportDataButton.addEventListener("click", exportData);
+  elements.copyExportButton.addEventListener("click", copyExportData);
+  elements.importDataForm.addEventListener("submit", importData);
+  elements.clearUserDataButton.addEventListener("click", clearUserData);
+  elements.resetDemoDataButton.addEventListener("click", resetDemoData);
+
   document.addEventListener("click", (event) => {
     const closeTarget = event.target.closest("[data-close-modal]");
 
@@ -2181,11 +2365,7 @@ function setupEventListeners() {
 }
 
 function initializeApp() {
-  saveJson(STORAGE_KEYS.favorites, favorites);
-  saveJson(STORAGE_KEYS.customRecipes, customRecipes);
-  saveJson(STORAGE_KEYS.shoppingList, shoppingList);
-  saveJson(STORAGE_KEYS.sources, sources);
-  saveJson(STORAGE_KEYS.importLog, importLog);
+  saveAllData();
 
   setupEventListeners();
   renderRecipes();
