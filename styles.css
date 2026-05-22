@@ -65,7 +65,8 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+button:focus {
   outline: 2px solid #1f1f1f;
   outline-offset: 2px;
 }
@@ -76,6 +77,12 @@ select:focus {
   align-items: center;
   gap: 12px;
   margin-bottom: 24px;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .toolbar-button {
@@ -274,10 +281,27 @@ select:focus {
   line-height: 1.8;
 }
 
-.detail-favorite-button {
+.detail-shopping-button {
   display: block;
   width: 100%;
   margin-top: 24px;
+  border: none;
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: #dff2e3;
+  color: #1f1f1f;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.detail-shopping-button:hover {
+  background: #c9e9d0;
+}
+
+.detail-favorite-button {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
   border: none;
   border-radius: 16px;
   padding: 14px 16px;
@@ -305,6 +329,66 @@ select:focus {
 
 .detail-source-link:hover {
   background: #3a3a3a;
+}
+
+.shopping-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.shopping-item {
+  display: grid;
+  grid-template-columns: 28px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #f7f4ef;
+  border-radius: 14px;
+}
+
+.shopping-item input {
+  width: auto;
+}
+
+.shopping-item-name {
+  color: #1f1f1f;
+}
+
+.shopping-item-name.checked {
+  color: #888;
+  text-decoration: line-through;
+}
+
+.remove-shopping-item {
+  border: none;
+  background: #eaded2;
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.remove-shopping-item:hover {
+  background: #dccbbc;
+}
+
+.danger-button {
+  display: block;
+  width: 100%;
+  margin-top: 24px;
+  border: none;
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: #f3d1c8;
+  color: #1f1f1f;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-button:hover {
+  background: #ecb9ad;
 }
 
 @media (max-width: 800px) {
