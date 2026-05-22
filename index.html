@@ -40,9 +40,15 @@
     </section>
 
     <section class="toolbar">
-      <button id="favoriteFilterButton" class="toolbar-button">
-        Nur Favoriten anzeigen
-      </button>
+      <div class="toolbar-actions">
+        <button id="favoriteFilterButton" class="toolbar-button">
+          Nur Favoriten anzeigen
+        </button>
+
+        <button id="shoppingListButton" class="toolbar-button">
+          Einkaufsliste öffnen
+        </button>
+      </div>
 
       <p id="resultCount" class="result-count">
         0 Rezepte gefunden
@@ -70,6 +76,10 @@
       <h3>Zutaten</h3>
       <ul id="modalIngredients"></ul>
 
+      <button id="modalShoppingButton" class="detail-shopping-button">
+        Zutaten zur Einkaufsliste hinzufügen
+      </button>
+
       <button id="modalFavoriteButton" class="detail-favorite-button">
         Als Favorit speichern
       </button>
@@ -77,6 +87,26 @@
       <a id="modalSource" class="detail-source-link" href="#" target="_blank">
         Originalrezept öffnen
       </a>
+    </div>
+  </div>
+
+  <div id="shoppingModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeShoppingList()"></div>
+
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeShoppingList()">×</button>
+
+      <p class="eyebrow">Planung</p>
+      <h2>Einkaufsliste</h2>
+      <p>
+        Hier findest du alle Zutaten, die du aus Rezepten hinzugefügt hast.
+      </p>
+
+      <div id="shoppingListItems" class="shopping-list"></div>
+
+      <button id="clearShoppingListButton" class="danger-button">
+        Einkaufsliste leeren
+      </button>
     </div>
   </div>
 
