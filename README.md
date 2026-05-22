@@ -1,20 +1,19 @@
-# Projektname
+# RecipeFinder
 
-Kurze Beschreibung des Projekts.
+RecipeFinder ist eine App zum Suchen, Sortieren und Speichern von Rezepten aus erlaubten Online-Quellen.
 
 ## Ziel
 
-Dieses Projekt soll ...
+Die App soll Rezepte übersichtlich sammeln und Nutzern helfen, schnell passende Gerichte zu finden.
 
-## Features
+## Hauptfunktionen
 
-- Feature 1
-- Feature 2
-- Feature 3
-
-## Installation
-
-Noch offen.
+- Rezeptsuche
+- Sortierung
+- Filter
+- Rezeptdetails
+- Favoriten
+- Quellenangabe mit Original-Link
 
 ## Status
 
