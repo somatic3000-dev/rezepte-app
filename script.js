@@ -306,6 +306,9 @@ const elements = {
   sourceList: document.getElementById("sourceList"),
   openAddSourceButton: document.getElementById("openAddSourceButton"),
   addSourceModal: document.getElementById("addSourceModal"),
+  addSourceTitle: document.getElementById("addSourceTitle"),
+  addSourceIntro: document.getElementById("addSourceIntro"),
+  saveSourceButton: document.getElementById("saveSourceButton"),
   addSourceForm: document.getElementById("addSourceForm"),
   newSourceName: document.getElementById("newSourceName"),
   newSourceUrl: document.getElementById("newSourceUrl"),
@@ -343,6 +346,7 @@ let showOnlyFavorites = false;
 let activeQuickFilter = "all";
 let activeRecipeId = null;
 let editingRecipeId = null;
+let editingSourceId = null;
 let activeServings = 2;
 let showOriginalIngredients = false;
 
@@ -2116,6 +2120,15 @@ function renderSources() {
         <button
           class="small-button"
           type="button"
+          data-source-action="edit"
+          data-source-id="${escapeHtml(source.id)}"
+        >
+          Bearbeiten
+        </button>
+
+        <button
+          class="small-button"
+          type="button"
           data-source-action="check"
           data-source-id="${escapeHtml(source.id)}"
         >
@@ -2149,19 +2162,80 @@ function renderSources() {
 }
 
 function openAddSourceModal() {
+  editingSourceId = null;
+
   elements.addSourceForm.reset();
+  elements.addSourceTitle.textContent = "Neue Homepage eintragen";
+  elements.addSourceIntro.textContent =
+    "Im Browser-Prototyp wird der Import simuliert. In der späteren Backend-Version werden robots.txt, strukturierte Rezeptdaten, Sitemaps und Importfehler echt geprüft.";
+  elements.saveSourceButton.textContent = "Quelle speichern";
+
   openModal(elements.addSourceModal);
   elements.newSourceName.focus();
 }
 
-function addSource(event) {
+function openEditSourceModal(sourceId) {
+  const source = sources.find((item) => item.id === sourceId);
+
+  if (!source) {
+    showToast("Quelle wurde nicht gefunden.");
+    return;
+  }
+
+  editingSourceId = source.id;
+
+  elements.addSourceForm.reset();
+  elements.addSourceTitle.textContent = "Quelle bearbeiten";
+  elements.addSourceIntro.textContent = "Passe Name, URL oder Import-Häufigkeit dieser Quelle an.";
+  elements.saveSourceButton.textContent = "Änderungen speichern";
+
+  elements.newSourceName.value = source.name;
+  elements.newSourceUrl.value = source.baseUrl.startsWith("http") ? source.baseUrl : "https://example.com";
+
+  if (["Manuell", "Wöchentlich", "Täglich"].includes(source.importFrequency)) {
+    elements.newSourceFrequency.value = source.importFrequency;
+  } else {
+    elements.newSourceFrequency.value = "Manuell";
+  }
+
+  openModal(elements.addSourceModal);
+  elements.newSourceName.focus();
+}
+
+function saveSourceFromForm(event) {
   event.preventDefault();
 
   const name = elements.newSourceName.value.trim();
   const baseUrl = elements.newSourceUrl.value.trim();
+  const importFrequency = elements.newSourceFrequency.value;
 
   if (!name || !baseUrl) {
     showToast("Bitte Quellenname und URL eingeben.");
+    return;
+  }
+
+  if (editingSourceId) {
+    const sourceIndex = sources.findIndex((source) => source.id === editingSourceId);
+
+    if (sourceIndex === -1) {
+      showToast("Quelle wurde nicht gefunden.");
+      return;
+    }
+
+    sources[sourceIndex] = {
+      ...sources[sourceIndex],
+      name,
+      baseUrl,
+      importFrequency,
+      lastCheckedAt: "Bearbeitet",
+      errorMessage: ""
+    };
+
+    editingSourceId = null;
+    saveSources();
+    closeModal("addSource");
+    renderSources();
+    showToast("Quelle wurde aktualisiert.");
     return;
   }
 
@@ -2172,7 +2246,7 @@ function addSource(event) {
     status: "Aktiv",
     robotsAllowed: true,
     parserType: "Prüfung erforderlich",
-    importFrequency: elements.newSourceFrequency.value,
+    importFrequency,
     importedRecipeCount: 0,
     lastCheckedAt: "Noch nicht geprüft",
     errorMessage: ""
@@ -2189,6 +2263,10 @@ function handleSourceAction(action, sourceId) {
 
   if (!source) {
     return;
+  }
+
+  if (action === "edit") {
+    openEditSourceModal(sourceId);
   }
 
   if (action === "toggle") {
@@ -2849,7 +2927,7 @@ function setupEventListeners() {
   elements.modalDeleteButton.addEventListener("click", deleteActiveCustomRecipe);
 
   elements.addRecipeForm.addEventListener("submit", saveRecipeFromForm);
-  elements.addSourceForm.addEventListener("submit", addSource);
+  elements.addSourceForm.addEventListener("submit", saveSourceFromForm);
 
   elements.clearShoppingListButton.addEventListener("click", clearShoppingList);
   elements.manualShoppingForm.addEventListener("submit", addManualShoppingItem);
