@@ -39,8 +39,46 @@
       </select>
     </section>
 
+    <section class="toolbar">
+      <button id="favoriteFilterButton" class="toolbar-button">
+        Nur Favoriten anzeigen
+      </button>
+
+      <p id="resultCount" class="result-count">
+        0 Rezepte gefunden
+      </p>
+    </section>
+
     <section id="recipeGrid" class="recipe-grid"></section>
   </main>
+
+  <div id="detailModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeDetails()"></div>
+
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeDetails()">×</button>
+
+      <p id="modalCategory" class="eyebrow"></p>
+      <h2 id="modalTitle"></h2>
+      <p id="modalDescription"></p>
+
+      <div class="modal-meta">
+        <span id="modalTime" class="tag"></span>
+        <span id="modalDifficulty" class="tag"></span>
+      </div>
+
+      <h3>Zutaten</h3>
+      <ul id="modalIngredients"></ul>
+
+      <button id="modalFavoriteButton" class="detail-favorite-button">
+        Als Favorit speichern
+      </button>
+
+      <a id="modalSource" class="detail-source-link" href="#" target="_blank">
+        Originalrezept öffnen
+      </a>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
