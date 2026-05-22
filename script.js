@@ -356,6 +356,84 @@ customRecipes = customRecipes.map(normalizeRecipe);
 sources = sources.map(normalizeSource);
 shoppingList = shoppingList.map(normalizeShoppingItem);
 
+function injectRecipeCardBadgeStyles() {
+  if (document.getElementById("recipe-card-badge-styles")) {
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.id = "recipe-card-badge-styles";
+  style.textContent = `
+    .recipe-card .card-header {
+      align-items: flex-start;
+    }
+
+    .card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .recipe-card-source-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: baseline;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      color: var(--muted, #6f6f6f);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .recipe-card-source-row span {
+      color: var(--muted, #6f6f6f);
+      font-weight: 650;
+    }
+
+    .recipe-card-source-row strong {
+      min-width: 0;
+      color: var(--text, #111111);
+      font-weight: 750;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tag.source-tag {
+      background: var(--surface-soft, #f7f3ec);
+      border-color: var(--border, #ddd0bd);
+      color: var(--text-soft, #333333);
+    }
+
+    .tag.local-tag {
+      background: var(--surface-soft, #f7f3ec);
+      border-color: var(--border, #ddd0bd);
+      color: var(--muted, #6f6f6f);
+    }
+
+    .tag.type-tag {
+      font-weight: 800;
+    }
+
+    @media (max-width: 720px) {
+      .recipe-card-source-row {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
+
+      .recipe-card-source-row strong {
+        white-space: normal;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
 function loadJson(key, fallback) {
   try {
     const stored = localStorage.getItem(key);
@@ -1062,6 +1140,29 @@ function getRecipeType(recipe) {
   return "local";
 }
 
+function getRecipeTypeConfig(recipe) {
+  const recipeType = getRecipeType(recipe);
+
+  if (recipeType === "imported") {
+    return {
+      label: "Importiert",
+      className: "import-tag type-tag"
+    };
+  }
+
+  if (recipeType === "custom") {
+    return {
+      label: "Eigenes Rezept",
+      className: "user-tag type-tag"
+    };
+  }
+
+  return {
+    label: "Lokal",
+    className: "local-tag type-tag"
+  };
+}
+
 function renderSourceFilterOptions() {
   const currentValue = elements.sourceFilterSelect.value || "all";
   const recipes = getAllRecipes();
@@ -1255,6 +1356,9 @@ function renderRecipes() {
 
   filteredRecipes.forEach((recipe) => {
     const sourceUrl = getSafeUrl(recipe.sourceUrl);
+    const recipeTypeConfig = getRecipeTypeConfig(recipe);
+    const sourceName = recipe.sourceName || "Unbekannte Quelle";
+
     const sourceLink = sourceUrl === "#"
       ? ""
       : `
@@ -1262,12 +1366,6 @@ function renderRecipes() {
           Originalquelle öffnen
         </a>
       `;
-
-    const recipeTypeTag = recipe.isImported
-      ? `<span class="tag import-tag">Importiert</span>`
-      : recipe.isCustom
-        ? `<span class="tag user-tag">Eigenes Rezept</span>`
-        : `<span class="tag">Lokal</span>`;
 
     const ingredientPreview = recipe.ingredients
       .slice(0, 3)
@@ -1284,7 +1382,10 @@ function renderRecipes() {
 
       <div class="recipe-card-content">
         <div class="card-header">
-          <span class="tag">${escapeHtml(recipe.category)}</span>
+          <div class="card-badges" aria-label="Rezeptkennzeichnung">
+            <span class="tag ${escapeHtml(recipeTypeConfig.className)}">${escapeHtml(recipeTypeConfig.label)}</span>
+            <span class="tag">${escapeHtml(recipe.category)}</span>
+          </div>
 
           <button
             class="favorite-button"
@@ -1301,8 +1402,12 @@ function renderRecipes() {
 
         <p>${escapeHtml(recipe.description)}</p>
 
+        <div class="recipe-card-source-row">
+          <span>Quelle</span>
+          <strong>${escapeHtml(sourceName)}</strong>
+        </div>
+
         <div class="meta">
-          ${recipeTypeTag}
           <span class="tag">${escapeHtml(recipe.totalTime)} Min.</span>
           <span class="tag">${escapeHtml(recipe.servings)} Portionen</span>
           <span class="tag">${escapeHtml(recipe.difficulty)}</span>
@@ -1392,7 +1497,7 @@ function openRecipeDetails(recipeId) {
     ? `${recipe.category} · Importiert`
     : recipe.isCustom
       ? `${recipe.category} · Eigenes Rezept`
-      : recipe.category;
+      : `${recipe.category} · Lokal`;
 
   elements.modalTitle.textContent = recipe.title;
   elements.modalDescription.textContent = recipe.description;
@@ -3077,6 +3182,7 @@ function setupEventListeners() {
 }
 
 function initializeApp() {
+  injectRecipeCardBadgeStyles();
   saveAllData();
 
   renderSourceFilterOptions();
