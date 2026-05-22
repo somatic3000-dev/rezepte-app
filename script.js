@@ -276,12 +276,16 @@ const elements = {
   modalInstructions: document.getElementById("modalInstructions"),
   modalShoppingButton: document.getElementById("modalShoppingButton"),
   modalFavoriteButton: document.getElementById("modalFavoriteButton"),
+  modalEditButton: document.getElementById("modalEditButton"),
   modalDeleteButton: document.getElementById("modalDeleteButton"),
   modalSource: document.getElementById("modalSource"),
 
   openAddRecipeButton: document.getElementById("openAddRecipeButton"),
   addRecipeModal: document.getElementById("addRecipeModal"),
+  addRecipeTitle: document.getElementById("addRecipeTitle"),
+  addRecipeIntro: document.getElementById("addRecipeIntro"),
   addRecipeForm: document.getElementById("addRecipeForm"),
+  saveRecipeButton: document.getElementById("saveRecipeButton"),
   newRecipeTitle: document.getElementById("newRecipeTitle"),
   newRecipeDescription: document.getElementById("newRecipeDescription"),
   newRecipeCategory: document.getElementById("newRecipeCategory"),
@@ -338,6 +342,7 @@ let importLog = loadJson(STORAGE_KEYS.importLog, []);
 let showOnlyFavorites = false;
 let activeQuickFilter = "all";
 let activeRecipeId = null;
+let editingRecipeId = null;
 let activeServings = 2;
 let showOriginalIngredients = false;
 
@@ -405,6 +410,7 @@ function normalizeRecipe(recipe) {
     isCustom: Boolean(recipe.isCustom),
     isImported: Boolean(recipe.isImported),
     createdAt: recipe.createdAt || new Date().toISOString(),
+    updatedAt: recipe.updatedAt || recipe.createdAt || new Date().toISOString(),
     ingredients: normalizeIngredients(recipe.ingredients || []),
     instructions: normalizeInstructions(recipe.instructions || recipe.steps || [], recipe.title || "dieses Rezept")
   };
@@ -1332,8 +1338,10 @@ function openRecipeDetails(recipeId) {
   }
 
   if (recipe.isCustom) {
+    elements.modalEditButton.classList.remove("hidden");
     elements.modalDeleteButton.classList.remove("hidden");
   } else {
+    elements.modalEditButton.classList.add("hidden");
     elements.modalDeleteButton.classList.add("hidden");
   }
 
@@ -1870,14 +1878,58 @@ function closeAllModals() {
 }
 
 function openAddRecipeModal() {
+  editingRecipeId = null;
+
   elements.addRecipeForm.reset();
+  elements.addRecipeTitle.textContent = "Rezept hinzufügen";
+  elements.addRecipeIntro.innerHTML =
+    'Trage ein eigenes Rezept ein. Zutaten können mit Mengen angegeben werden, zum Beispiel: <strong>200 g Pasta</strong> oder <strong>Salz nach Geschmack</strong>.';
+  elements.saveRecipeButton.textContent = "Rezept speichern";
   elements.newRecipeServings.value = 2;
   elements.newRecipeTime.value = 30;
+
   openModal(elements.addRecipeModal);
   elements.newRecipeTitle.focus();
 }
 
-function addCustomRecipe(event) {
+function openEditRecipeModal() {
+  const recipe = customRecipes.find((item) => item.id === activeRecipeId);
+
+  if (!recipe) {
+    showToast("Dieses Rezept kann nicht bearbeitet werden.");
+    return;
+  }
+
+  const normalizedRecipe = normalizeRecipe(recipe);
+  editingRecipeId = normalizedRecipe.id;
+
+  elements.addRecipeForm.reset();
+  elements.addRecipeTitle.textContent = "Rezept bearbeiten";
+  elements.addRecipeIntro.textContent = "Passe dein eigenes Rezept an. Beim Speichern werden Zutaten und Zubereitung neu analysiert.";
+  elements.saveRecipeButton.textContent = "Änderungen speichern";
+
+  elements.newRecipeTitle.value = normalizedRecipe.title;
+  elements.newRecipeDescription.value = normalizedRecipe.description;
+  elements.newRecipeCategory.value = normalizedRecipe.category;
+  elements.newRecipeDifficulty.value = normalizedRecipe.difficulty;
+  elements.newRecipeServings.value = normalizedRecipe.servings;
+  elements.newRecipeTime.value = normalizedRecipe.totalTime;
+  elements.newRecipeIcon.value = normalizedRecipe.icon;
+  elements.newRecipeIngredients.value = normalizedRecipe.ingredients
+    .map((ingredient) => ingredient.originalText || formatIngredientLabel(ingredient))
+    .join("\n");
+  elements.newRecipeInstructions.value = normalizedRecipe.instructions
+    .map((instruction) => instruction.text)
+    .join("\n");
+  elements.newRecipeTags.value = normalizedRecipe.tags.join(", ");
+  elements.newRecipeSourceUrl.value = normalizedRecipe.sourceUrl;
+
+  closeModal("detail");
+  openModal(elements.addRecipeModal);
+  elements.newRecipeTitle.focus();
+}
+
+function saveRecipeFromForm(event) {
   event.preventDefault();
 
   const title = elements.newRecipeTitle.value.trim();
@@ -1890,6 +1942,46 @@ function addCustomRecipe(event) {
 
   if (!title || !description || ingredientLines.length === 0) {
     showToast("Bitte fülle Rezeptname, Beschreibung und Zutaten aus.");
+    return;
+  }
+
+  if (editingRecipeId) {
+    const recipeIndex = customRecipes.findIndex((recipe) => recipe.id === editingRecipeId);
+
+    if (recipeIndex === -1) {
+      showToast("Das Rezept wurde nicht gefunden.");
+      return;
+    }
+
+    const previousRecipe = normalizeRecipe(customRecipes[recipeIndex]);
+
+    customRecipes[recipeIndex] = {
+      ...previousRecipe,
+      title,
+      description,
+      sourceName: sourceUrl ? previousRecipe.sourceName || "Eigene Quelle" : "Eigenes Rezept",
+      sourceUrl,
+      category: elements.newRecipeCategory.value,
+      difficulty: elements.newRecipeDifficulty.value,
+      servings: Number(elements.newRecipeServings.value),
+      totalTime: Number(elements.newRecipeTime.value),
+      tags,
+      icon,
+      imageClass: getImageClassFromIcon(icon),
+      updatedAt: new Date().toISOString(),
+      ingredients: ingredientLines.map(createIngredient),
+      instructions: instructionLines.length > 0
+        ? instructionLines.map((line, index) => createInstruction(line, index + 1))
+        : createDefaultInstructions(title)
+    };
+
+    activeRecipeId = editingRecipeId;
+    editingRecipeId = null;
+
+    saveCustomRecipes();
+    closeModal("addRecipe");
+    renderRecipes();
+    showToast("Rezept wurde aktualisiert.");
     return;
   }
 
@@ -1910,6 +2002,7 @@ function addCustomRecipe(event) {
     isCustom: true,
     isImported: false,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     ingredients: ingredientLines.map(createIngredient),
     instructions: instructionLines.length > 0
       ? instructionLines.map((line, index) => createInstruction(line, index + 1))
@@ -2203,6 +2296,7 @@ function runImportSimulation() {
       isCustom: true,
       isImported: true,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       ingredients: [
         createIngredient("500 g Kartoffeln"),
         createIngredient("250 g Karotten"),
@@ -2282,6 +2376,7 @@ function simulateUrlRecipeImport(event) {
     isCustom: true,
     isImported: true,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     ingredients: createSimulatedIngredientsFromTitle(recipeTitle),
     instructions: createSimulatedInstructionsFromTitle(recipeTitle)
   };
@@ -2750,9 +2845,10 @@ function setupEventListeners() {
     }
   });
 
+  elements.modalEditButton.addEventListener("click", openEditRecipeModal);
   elements.modalDeleteButton.addEventListener("click", deleteActiveCustomRecipe);
 
-  elements.addRecipeForm.addEventListener("submit", addCustomRecipe);
+  elements.addRecipeForm.addEventListener("submit", saveRecipeFromForm);
   elements.addSourceForm.addEventListener("submit", addSource);
 
   elements.clearShoppingListButton.addEventListener("click", clearShoppingList);
