@@ -46,6 +46,30 @@ const recipes = [
     tags: ["vegan", "suppe", "tomate"],
     sourceName: "Beispielquelle",
     sourceUrl: "https://example.com"
+  },
+  {
+    id: "5",
+    title: "Hähnchen-Reis-Pfanne",
+    description: "Herzhafte Pfanne mit Reis, Gemüse und Hähnchen.",
+    ingredients: ["Hähnchen", "Reis", "Paprika", "Erbsen", "Zwiebeln"],
+    totalTime: 40,
+    difficulty: "Mittel",
+    category: "Hauptgericht",
+    tags: ["reis", "hähnchen", "pfanne"],
+    sourceName: "Beispielquelle",
+    sourceUrl: "https://example.com"
+  },
+  {
+    id: "6",
+    title: "Gurkensalat",
+    description: "Klassischer, schneller Salat mit frischem Dill.",
+    ingredients: ["Gurke", "Dill", "Joghurt", "Zitrone", "Salz"],
+    totalTime: 10,
+    difficulty: "Einfach",
+    category: "Salat",
+    tags: ["salat", "schnell", "frisch"],
+    sourceName: "Beispielquelle",
+    sourceUrl: "https://example.com"
   }
 ];
 
@@ -53,15 +77,33 @@ const searchInput = document.getElementById("searchInput");
 const sortSelect = document.getElementById("sortSelect");
 const categorySelect = document.getElementById("categorySelect");
 const recipeGrid = document.getElementById("recipeGrid");
+const favoriteFilterButton = document.getElementById("favoriteFilterButton");
+const resultCount = document.getElementById("resultCount");
+
+const detailModal = document.getElementById("detailModal");
+const modalCategory = document.getElementById("modalCategory");
+const modalTitle = document.getElementById("modalTitle");
+const modalDescription = document.getElementById("modalDescription");
+const modalTime = document.getElementById("modalTime");
+const modalDifficulty = document.getElementById("modalDifficulty");
+const modalIngredients = document.getElementById("modalIngredients");
+const modalSource = document.getElementById("modalSource");
+const modalFavoriteButton = document.getElementById("modalFavoriteButton");
 
 let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+let showOnlyFavorites = false;
+let activeRecipeId = null;
 
 function saveFavorites() {
   localStorage.setItem("favorites", JSON.stringify(favorites));
 }
 
+function isFavorite(recipeId) {
+  return favorites.includes(recipeId);
+}
+
 function toggleFavorite(recipeId) {
-  if (favorites.includes(recipeId)) {
+  if (isFavorite(recipeId)) {
     favorites = favorites.filter((id) => id !== recipeId);
   } else {
     favorites.push(recipeId);
@@ -69,23 +111,60 @@ function toggleFavorite(recipeId) {
 
   saveFavorites();
   renderRecipes();
+
+  if (activeRecipeId === recipeId) {
+    updateModalFavoriteButton(recipeId);
+  }
+}
+
+function updateModalFavoriteButton(recipeId) {
+  if (isFavorite(recipeId)) {
+    modalFavoriteButton.textContent = "Aus Favoriten entfernen";
+  } else {
+    modalFavoriteButton.textContent = "Als Favorit speichern";
+  }
 }
 
 function openDetails(recipeId) {
   const recipe = recipes.find((item) => item.id === recipeId);
 
-  alert(
-    `${recipe.title}\n\n` +
-    `${recipe.description}\n\n` +
-    `Zutaten:\n- ${recipe.ingredients.join("\n- ")}\n\n` +
-    `Kochzeit: ${recipe.totalTime} Minuten\n` +
-    `Schwierigkeit: ${recipe.difficulty}\n` +
-    `Kategorie: ${recipe.category}`
-  );
+  if (!recipe) {
+    return;
+  }
+
+  activeRecipeId = recipeId;
+
+  modalCategory.textContent = recipe.category;
+  modalTitle.textContent = recipe.title;
+  modalDescription.textContent = recipe.description;
+  modalTime.textContent = `${recipe.totalTime} Min.`;
+  modalDifficulty.textContent = recipe.difficulty;
+  modalSource.href = recipe.sourceUrl;
+
+  modalIngredients.innerHTML = "";
+
+  recipe.ingredients.forEach((ingredient) => {
+    const listItem = document.createElement("li");
+    listItem.textContent = ingredient;
+    modalIngredients.appendChild(listItem);
+  });
+
+  modalFavoriteButton.onclick = function () {
+    toggleFavorite(recipe.id);
+  };
+
+  updateModalFavoriteButton(recipe.id);
+
+  detailModal.classList.remove("hidden");
 }
 
-function renderRecipes() {
-  const searchTerm = searchInput.value.toLowerCase();
+function closeDetails() {
+  detailModal.classList.add("hidden");
+  activeRecipeId = null;
+}
+
+function getFilteredRecipes() {
+  const searchTerm = searchInput.value.toLowerCase().trim();
   const sortValue = sortSelect.value;
   const categoryValue = categorySelect.value;
 
@@ -102,8 +181,10 @@ function renderRecipes() {
     const matchesSearch = searchableText.includes(searchTerm);
     const matchesCategory =
       categoryValue === "all" || recipe.category === categoryValue;
+    const matchesFavoriteFilter =
+      !showOnlyFavorites || isFavorite(recipe.id);
 
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && matchesFavoriteFilter;
   });
 
   if (sortValue === "time") {
@@ -114,19 +195,54 @@ function renderRecipes() {
     filteredRecipes.sort((a, b) => a.title.localeCompare(b.title));
   }
 
+  return filteredRecipes;
+}
+
+function updateToolbar(filteredRecipes) {
+  const recipeCount = filteredRecipes.length;
+
+  if (recipeCount === 1) {
+    resultCount.textContent = "1 Rezept gefunden";
+  } else {
+    resultCount.textContent = `${recipeCount} Rezepte gefunden`;
+  }
+
+  if (showOnlyFavorites) {
+    favoriteFilterButton.textContent = "Alle Rezepte anzeigen";
+    favoriteFilterButton.classList.add("active");
+  } else {
+    favoriteFilterButton.textContent = "Nur Favoriten anzeigen";
+    favoriteFilterButton.classList.remove("active");
+  }
+}
+
+function renderRecipes() {
+  const filteredRecipes = getFilteredRecipes();
+
+  updateToolbar(filteredRecipes);
+
   recipeGrid.innerHTML = "";
 
   if (filteredRecipes.length === 0) {
-    recipeGrid.innerHTML = `
-      <div class="empty">
-        Keine passenden Rezepte gefunden.
-      </div>
-    `;
+    if (showOnlyFavorites) {
+      recipeGrid.innerHTML = `
+        <div class="empty">
+          Du hast noch keine passenden Favoriten gespeichert.
+        </div>
+      `;
+    } else {
+      recipeGrid.innerHTML = `
+        <div class="empty">
+          Keine passenden Rezepte gefunden.
+        </div>
+      `;
+    }
+
     return;
   }
 
   filteredRecipes.forEach((recipe) => {
-    const isFavorite = favorites.includes(recipe.id);
+    const favorite = isFavorite(recipe.id);
 
     const card = document.createElement("article");
     card.className = "recipe-card";
@@ -135,7 +251,7 @@ function renderRecipes() {
       <div class="card-header">
         <span class="tag">${recipe.category}</span>
         <button class="favorite-button" onclick="toggleFavorite('${recipe.id}')">
-          ${isFavorite ? "★" : "☆"}
+          ${favorite ? "★" : "☆"}
         </button>
       </div>
 
@@ -169,5 +285,16 @@ function renderRecipes() {
 searchInput.addEventListener("input", renderRecipes);
 sortSelect.addEventListener("change", renderRecipes);
 categorySelect.addEventListener("change", renderRecipes);
+
+favoriteFilterButton.addEventListener("click", function () {
+  showOnlyFavorites = !showOnlyFavorites;
+  renderRecipes();
+});
+
+document.addEventListener("keydown", function (event) {
+  if (event.key === "Escape") {
+    closeDetails();
+  }
+});
 
 renderRecipes();
