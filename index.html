@@ -8,7 +8,7 @@
 
   <meta
     name="description"
-    content="RecipeFinder ist eine moderne Rezept-App mit Rezeptsuche, Portionsskalierung, Einkaufsliste, Quellen-Manager, URL-Import-Simulation, Kochanleitungen und Datenverwaltung."
+    content="RecipeFinder ist eine moderne Rezept-App mit Rezeptsuche, Portionsskalierung, Einkaufsliste, Quellen-Manager, URL-Import-Simulation, Kochanleitungen, Rezeptbearbeitung und Datenverwaltung."
   />
 
   <link rel="stylesheet" href="styles.css" />
@@ -496,6 +496,10 @@
             Als Favorit speichern
           </button>
 
+          <button id="modalEditButton" class="secondary-button hidden" type="button">
+            Eigenes Rezept bearbeiten
+          </button>
+
           <button id="modalDeleteButton" class="danger-button hidden" type="button">
             Eigenes Rezept löschen
           </button>
@@ -520,7 +524,7 @@
 
       <h2 id="addRecipeTitle">Rezept hinzufügen</h2>
 
-      <p>
+      <p id="addRecipeIntro">
         Trage ein eigenes Rezept ein. Zutaten können mit Mengen angegeben werden,
         zum Beispiel: <strong>200 g Pasta</strong> oder <strong>Salz nach Geschmack</strong>.
       </p>
@@ -658,7 +662,7 @@
           </span>
         </label>
 
-        <button class="submit-button" type="submit">
+        <button id="saveRecipeButton" class="submit-button" type="submit">
           Rezept speichern
         </button>
       </form>
