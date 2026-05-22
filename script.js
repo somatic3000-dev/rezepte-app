@@ -8,6 +8,8 @@ const recipes = [
     difficulty: "Einfach",
     category: "Hauptgericht",
     tags: ["vegetarisch", "schnell", "pasta"],
+    icon: "🍝",
+    imageClass: "image-pasta",
     sourceName: "Beispielquelle",
     sourceUrl: "https://example.com"
   },
@@ -20,6 +22,8 @@ const recipes = [
     difficulty: "Einfach",
     category: "Salat",
     tags: ["vegetarisch", "reis", "schnell"],
+    icon: "🥗",
+    imageClass: "image-salad",
     sourceName: "Beispielquelle",
     sourceUrl: "https://example.com"
   },
@@ -32,6 +36,8 @@ const recipes = [
     difficulty: "Mittel",
     category: "Hauptgericht",
     tags: ["vegan", "curry", "gemüse"],
+    icon: "🍛",
+    imageClass: "image-curry",
     sourceName: "Beispielquelle",
     sourceUrl: "https://example.com"
   },
@@ -44,6 +50,8 @@ const recipes = [
     difficulty: "Einfach",
     category: "Suppe",
     tags: ["vegan", "suppe", "tomate"],
+    icon: "🍅",
+    imageClass: "image-soup",
     sourceName: "Beispielquelle",
     sourceUrl: "https://example.com"
   },
@@ -56,6 +64,8 @@ const recipes = [
     difficulty: "Mittel",
     category: "Hauptgericht",
     tags: ["reis", "hähnchen", "pfanne"],
+    icon: "🍚",
+    imageClass: "image-rice",
     sourceName: "Beispielquelle",
     sourceUrl: "https://example.com"
   },
@@ -68,6 +78,8 @@ const recipes = [
     difficulty: "Einfach",
     category: "Salat",
     tags: ["salat", "schnell", "frisch"],
+    icon: "🥒",
+    imageClass: "image-salad",
     sourceName: "Beispielquelle",
     sourceUrl: "https://example.com"
   }
@@ -80,8 +92,10 @@ const recipeGrid = document.getElementById("recipeGrid");
 const favoriteFilterButton = document.getElementById("favoriteFilterButton");
 const shoppingListButton = document.getElementById("shoppingListButton");
 const resultCount = document.getElementById("resultCount");
+const quickFilterButtons = document.querySelectorAll(".quick-filter");
 
 const detailModal = document.getElementById("detailModal");
+const modalImage = document.getElementById("modalImage");
 const modalCategory = document.getElementById("modalCategory");
 const modalTitle = document.getElementById("modalTitle");
 const modalDescription = document.getElementById("modalDescription");
@@ -100,6 +114,7 @@ let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
 let shoppingList = JSON.parse(localStorage.getItem("shoppingList")) || [];
 let showOnlyFavorites = false;
 let activeRecipeId = null;
+let activeQuickFilter = "all";
 
 function saveFavorites() {
   localStorage.setItem("favorites", JSON.stringify(favorites));
@@ -163,6 +178,7 @@ function addRecipeToShoppingList(recipeId) {
 
   saveShoppingList();
   renderShoppingList();
+  updateToolbar(getFilteredRecipes());
 
   modalShoppingButton.textContent = "Zutaten wurden hinzugefügt";
 
@@ -179,6 +195,9 @@ function openDetails(recipeId) {
   }
 
   activeRecipeId = recipeId;
+
+  modalImage.textContent = recipe.icon;
+  modalImage.className = `modal-image ${recipe.imageClass || "image-default"}`;
 
   modalCategory.textContent = recipe.category;
   modalTitle.textContent = recipe.title;
@@ -242,12 +261,14 @@ function removeShoppingItem(itemId) {
   shoppingList = shoppingList.filter((item) => item.id !== itemId);
   saveShoppingList();
   renderShoppingList();
+  updateToolbar(getFilteredRecipes());
 }
 
 function clearShoppingList() {
   shoppingList = [];
   saveShoppingList();
   renderShoppingList();
+  updateToolbar(getFilteredRecipes());
 }
 
 function renderShoppingList() {
@@ -310,8 +331,10 @@ function getFilteredRecipes() {
       categoryValue === "all" || recipe.category === categoryValue;
     const matchesFavoriteFilter =
       !showOnlyFavorites || isFavorite(recipe.id);
+    const matchesQuickFilter =
+      activeQuickFilter === "all" || searchableText.includes(activeQuickFilter);
 
-    return matchesSearch && matchesCategory && matchesFavoriteFilter;
+    return matchesSearch && matchesCategory && matchesFavoriteFilter && matchesQuickFilter;
   });
 
   if (sortValue === "time") {
@@ -381,38 +404,58 @@ function renderRecipes() {
     card.className = "recipe-card";
 
     card.innerHTML = `
-      <div class="card-header">
-        <span class="tag">${recipe.category}</span>
-        <button class="favorite-button" onclick="toggleFavorite('${recipe.id}')">
-          ${favorite ? "★" : "☆"}
+      <div class="recipe-image ${recipe.imageClass || "image-default"}">
+        ${recipe.icon || "🍽️"}
+      </div>
+
+      <div class="recipe-card-content">
+        <div class="card-header">
+          <span class="tag">${recipe.category}</span>
+          <button class="favorite-button" onclick="toggleFavorite('${recipe.id}')">
+            ${favorite ? "★" : "☆"}
+          </button>
+        </div>
+
+        <h2>${recipe.title}</h2>
+        <p>${recipe.description}</p>
+
+        <div class="meta">
+          <span class="tag">${recipe.totalTime} Min.</span>
+          <span class="tag">${recipe.difficulty}</span>
+          ${recipe.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}
+        </div>
+
+        <div class="ingredients">
+          <strong>Zutaten:</strong>
+          ${recipe.ingredients.slice(0, 3).join(", ")}
+        </div>
+
+        <button class="detail-button" onclick="openDetails('${recipe.id}')">
+          Details anzeigen
         </button>
+
+        <a class="source-link" href="${recipe.sourceUrl}" target="_blank">
+          Originalquelle öffnen
+        </a>
       </div>
-
-      <h2>${recipe.title}</h2>
-      <p>${recipe.description}</p>
-
-      <div class="meta">
-        <span class="tag">${recipe.totalTime} Min.</span>
-        <span class="tag">${recipe.difficulty}</span>
-        ${recipe.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}
-      </div>
-
-      <div class="ingredients">
-        <strong>Zutaten:</strong>
-        ${recipe.ingredients.slice(0, 3).join(", ")}
-      </div>
-
-      <button class="detail-button" onclick="openDetails('${recipe.id}')">
-        Details anzeigen
-      </button>
-
-      <a class="source-link" href="${recipe.sourceUrl}" target="_blank">
-        Originalquelle öffnen
-      </a>
     `;
 
     recipeGrid.appendChild(card);
   });
+}
+
+function setQuickFilter(filterValue) {
+  activeQuickFilter = filterValue;
+
+  quickFilterButtons.forEach((button) => {
+    if (button.dataset.filter === filterValue) {
+      button.classList.add("active");
+    } else {
+      button.classList.remove("active");
+    }
+  });
+
+  renderRecipes();
 }
 
 searchInput.addEventListener("input", renderRecipes);
@@ -426,6 +469,12 @@ favoriteFilterButton.addEventListener("click", function () {
 
 shoppingListButton.addEventListener("click", openShoppingList);
 clearShoppingListButton.addEventListener("click", clearShoppingList);
+
+quickFilterButtons.forEach((button) => {
+  button.addEventListener("click", function () {
+    setQuickFilter(button.dataset.filter);
+  });
+});
 
 document.addEventListener("keydown", function (event) {
   if (event.key === "Escape") {
