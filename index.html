@@ -8,12 +8,21 @@
 </head>
 <body>
   <header class="hero">
-    <div>
-      <p class="eyebrow">Rezeptsuche</p>
-      <h1>RecipeFinder</h1>
-      <p class="subtitle">
-        Finde schnelle, einfache und passende Rezepte nach Zutaten, Zeit und Kategorie.
-      </p>
+    <div class="hero-content">
+      <div>
+        <p class="eyebrow">Intuitive Rezeptsuche</p>
+        <h1>RecipeFinder</h1>
+        <p class="subtitle">
+          Finde schnelle, einfache und passende Rezepte nach Zutaten, Zeit,
+          Kategorie und Ernährungsform.
+        </p>
+      </div>
+
+      <div class="hero-card">
+        <p class="hero-card-label">Heute empfohlen</p>
+        <h2>Veganes Curry</h2>
+        <p>35 Minuten · vegan · wärmend</p>
+      </div>
     </div>
   </header>
 
@@ -37,6 +46,24 @@
         <option value="Salat">Salat</option>
         <option value="Suppe">Suppe</option>
       </select>
+    </section>
+
+    <section class="quick-filters" aria-label="Schnellfilter">
+      <button class="quick-filter active" data-filter="all">
+        Alle
+      </button>
+      <button class="quick-filter" data-filter="schnell">
+        Schnell
+      </button>
+      <button class="quick-filter" data-filter="vegan">
+        Vegan
+      </button>
+      <button class="quick-filter" data-filter="vegetarisch">
+        Vegetarisch
+      </button>
+      <button class="quick-filter" data-filter="reis">
+        Reis
+      </button>
     </section>
 
     <section class="toolbar">
@@ -63,6 +90,8 @@
 
     <div class="modal-content">
       <button class="modal-close" onclick="closeDetails()">×</button>
+
+      <div id="modalImage" class="modal-image"></div>
 
       <p id="modalCategory" class="eyebrow"></p>
       <h2 id="modalTitle"></h2>
