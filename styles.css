@@ -9,15 +9,28 @@ body {
   color: #1f1f1f;
 }
 
+button,
+input,
+select {
+  font: inherit;
+}
+
 .hero {
-  padding: 56px 24px;
-  background: linear-gradient(135deg, #fff7e6, #e9f5ec);
+  padding: 64px 24px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 229, 138, 0.7), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(185, 223, 191, 0.85), transparent 36%),
+    linear-gradient(135deg, #fff7e6, #e9f5ec);
   border-bottom: 1px solid #e6dfd3;
 }
 
-.hero div {
+.hero-content {
   max-width: 1000px;
   margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 28px;
+  align-items: center;
 }
 
 .eyebrow {
@@ -30,14 +43,55 @@ body {
 
 h1 {
   margin: 0;
-  font-size: clamp(40px, 8vw, 76px);
+  font-size: clamp(44px, 8vw, 82px);
   line-height: 1;
+  letter-spacing: -0.06em;
 }
 
 .subtitle {
-  max-width: 640px;
+  max-width: 680px;
   font-size: 20px;
   line-height: 1.5;
+  color: #555;
+}
+
+.hero-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.hero-card::before {
+  content: "🍛";
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  margin-bottom: 18px;
+  border-radius: 24px;
+  background: #fff3c4;
+  font-size: 44px;
+}
+
+.hero-card-label {
+  margin: 0 0 8px;
+  color: #6a7f4f;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.hero-card h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+
+.hero-card p:last-child {
+  margin: 0;
   color: #555;
 }
 
@@ -51,7 +105,7 @@ h1 {
   display: grid;
   grid-template-columns: 1fr 220px 180px;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 input,
@@ -69,6 +123,32 @@ select:focus,
 button:focus {
   outline: 2px solid #1f1f1f;
   outline-offset: 2px;
+}
+
+.quick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.quick-filter {
+  border: 1px solid #d8d0c4;
+  background: white;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quick-filter:hover {
+  background: #f0eee9;
+}
+
+.quick-filter.active {
+  background: #6a7f4f;
+  color: white;
+  border-color: #6a7f4f;
 }
 
 .toolbar {
@@ -117,11 +197,52 @@ button:focus {
 }
 
 .recipe-card {
+  overflow: hidden;
   background: white;
   border: 1px solid #e5ded2;
-  border-radius: 24px;
-  padding: 20px;
+  border-radius: 28px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recipe-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.08);
+}
+
+.recipe-image {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  font-size: 58px;
+}
+
+.image-pasta {
+  background: linear-gradient(135deg, #fff1c4, #f6c177);
+}
+
+.image-salad {
+  background: linear-gradient(135deg, #dff2e3, #9bcf9f);
+}
+
+.image-curry {
+  background: linear-gradient(135deg, #ffe0b2, #e89f5b);
+}
+
+.image-soup {
+  background: linear-gradient(135deg, #ffd4c4, #e98b73);
+}
+
+.image-rice {
+  background: linear-gradient(135deg, #f5ead7, #d8c2a3);
+}
+
+.image-default {
+  background: linear-gradient(135deg, #f0eee9, #d8d0c4);
+}
+
+.recipe-card-content {
+  padding: 20px;
 }
 
 .recipe-card h2 {
@@ -229,13 +350,22 @@ button:focus {
 
 .modal-content {
   position: relative;
-  width: min(100%, 560px);
+  width: min(100%, 600px);
   max-height: 90vh;
   overflow-y: auto;
   background: white;
   border-radius: 28px;
   padding: 28px;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
+}
+
+.modal-image {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  margin: -28px -28px 24px;
+  border-radius: 28px 28px 0 0;
+  font-size: 68px;
 }
 
 .modal-content h2 {
@@ -256,8 +386,9 @@ button:focus {
   position: absolute;
   top: 18px;
   right: 18px;
+  z-index: 2;
   border: none;
-  background: #f0eee9;
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 999px;
   width: 38px;
   height: 38px;
@@ -266,7 +397,7 @@ button:focus {
 }
 
 .modal-close:hover {
-  background: #e2ddd4;
+  background: white;
 }
 
 .modal-meta {
@@ -391,7 +522,15 @@ button:focus {
   background: #ecb9ad;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
+  .hero-content {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-card {
+    max-width: 420px;
+  }
+
   .controls {
     grid-template-columns: 1fr;
   }
