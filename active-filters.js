@@ -21,6 +21,136 @@ const activeFilterElements = {
 
 const RECIPE_VIEW_STORAGE_KEY = "rf_recipeViewMode";
 
+const DIETARY_RULES = {
+  meatAndFish: [
+    "hähnchen",
+    "huhn",
+    "chicken",
+    "pute",
+    "truthahn",
+    "rind",
+    "rindfleisch",
+    "beef",
+    "schwein",
+    "schweinefleisch",
+    "pork",
+    "speck",
+    "bacon",
+    "schinken",
+    "salami",
+    "wurst",
+    "hackfleisch",
+    "kalb",
+    "lamm",
+    "ente",
+    "gans",
+    "fisch",
+    "lachs",
+    "thunfisch",
+    "forelle",
+    "kabeljau",
+    "garnelen",
+    "garnele",
+    "shrimp",
+    "scampi",
+    "muscheln",
+    "muschel",
+    "krabben",
+    "krabbe"
+  ],
+  dairy: [
+    "milch",
+    "kuhmilch",
+    "butter",
+    "joghurt",
+    "yoghurt",
+    "quark",
+    "sahne",
+    "schmand",
+    "creme fraiche",
+    "crème fraîche",
+    "käse",
+    "parmesan",
+    "mozzarella",
+    "feta",
+    "ricotta",
+    "mascarpone",
+    "frischkäse",
+    "gouda",
+    "emmentaler",
+    "cheddar"
+  ],
+  eggs: [
+    "ei",
+    "eier",
+    "eigelb",
+    "eiweiß"
+  ],
+  honey: [
+    "honig"
+  ],
+  gluten: [
+    "weizen",
+    "weizenmehl",
+    "mehl",
+    "dinkel",
+    "dinkelmehl",
+    "roggen",
+    "gerste",
+    "bulgur",
+    "couscous",
+    "seitan",
+    "pasta",
+    "nudeln",
+    "spaghetti",
+    "tagliatelle",
+    "lasagne",
+    "brot",
+    "brötchen",
+    "paniermehl",
+    "panko"
+  ],
+  glutenFreeAlternatives: [
+    "reis",
+    "reisnudeln",
+    "glasnudeln",
+    "kartoffeln",
+    "kartoffel",
+    "mais",
+    "polenta",
+    "quinoa",
+    "hirse",
+    "buchweizen",
+    "hafer glutenfrei",
+    "glutenfreie pasta",
+    "glutenfreie nudeln",
+    "glutenfreies mehl"
+  ],
+  veganIndicators: [
+    "vegan",
+    "pflanzlich",
+    "plant based",
+    "plant-based"
+  ],
+  vegetarianIndicators: [
+    "vegetarisch",
+    "vegetarian"
+  ],
+  dairyFreeIndicators: [
+    "milchfrei",
+    "laktosefrei",
+    "dairy free",
+    "dairy-free",
+    "ohne milch"
+  ],
+  glutenFreeIndicators: [
+    "glutenfrei",
+    "gluten free",
+    "gluten-free",
+    "ohne gluten"
+  ]
+};
+
 function injectActiveFilterStyles() {
   if (document.getElementById("active-filter-chip-styles")) {
     return;
@@ -307,6 +437,13 @@ function injectActiveFilterStyles() {
       box-shadow: var(--shadow-soft, 0 10px 24px rgba(0, 0, 0, 0.06));
     }
 
+    .tag.feature-dairy-free,
+    .tag.feature-gluten-free {
+      background: var(--surface, #ffffff);
+      border-color: var(--border-strong, #cbb69d);
+      color: var(--text, #111111);
+    }
+
     @media (max-width: 820px) {
       .recipe-grid.recipe-list-view .recipe-card {
         grid-template-columns: 150px minmax(0, 1fr);
@@ -364,6 +501,220 @@ function injectActiveFilterStyles() {
   `;
 
   document.head.appendChild(style);
+}
+
+function normalizeDietaryText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replaceAll("ä", "ae")
+    .replaceAll("ö", "oe")
+    .replaceAll("ü", "ue")
+    .replaceAll("ß", "ss")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getRecipeDietaryText(recipe) {
+  if (!recipe) {
+    return "";
+  }
+
+  const ingredientText = Array.isArray(recipe.ingredients)
+    ? recipe.ingredients.map((ingredient) => {
+      return [
+        ingredient.originalText,
+        ingredient.original_text,
+        ingredient.food,
+        ingredient.normalizedFood,
+        ingredient.normalized_food,
+        ingredient.note
+      ].filter(Boolean).join(" ");
+    }).join(" ")
+    : "";
+
+  const instructionText = Array.isArray(recipe.instructions)
+    ? recipe.instructions.map((instruction) => instruction.text || "").join(" ")
+    : "";
+
+  return normalizeDietaryText([
+    recipe.title,
+    recipe.description,
+    recipe.category,
+    recipe.difficulty,
+    recipe.sourceName,
+    Array.isArray(recipe.tags) ? recipe.tags.join(" ") : "",
+    ingredientText,
+    instructionText
+  ].filter(Boolean).join(" "));
+}
+
+function normalizeRuleList(list) {
+  return list.map(normalizeDietaryText);
+}
+
+function dietaryTextContainsAny(text, list) {
+  const normalizedList = normalizeRuleList(list);
+
+  return normalizedList.some((item) => {
+    if (!item) {
+      return false;
+    }
+
+    const escapedItem = item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(`(^|\\s|-)${escapedItem}(\\s|-|$)`, "i");
+
+    return pattern.test(text);
+  });
+}
+
+function getRecipeDietaryProfile(recipe) {
+  const text = getRecipeDietaryText(recipe);
+
+  const hasMeatOrFish = dietaryTextContainsAny(text, DIETARY_RULES.meatAndFish);
+  const hasDairy = dietaryTextContainsAny(text, DIETARY_RULES.dairy);
+  const hasEggs = dietaryTextContainsAny(text, DIETARY_RULES.eggs);
+  const hasHoney = dietaryTextContainsAny(text, DIETARY_RULES.honey);
+  const hasGluten = dietaryTextContainsAny(text, DIETARY_RULES.gluten);
+  const hasGlutenFreeAlternative = dietaryTextContainsAny(text, DIETARY_RULES.glutenFreeAlternatives);
+
+  const explicitVegan = dietaryTextContainsAny(text, DIETARY_RULES.veganIndicators);
+  const explicitVegetarian = dietaryTextContainsAny(text, DIETARY_RULES.vegetarianIndicators);
+  const explicitDairyFree = dietaryTextContainsAny(text, DIETARY_RULES.dairyFreeIndicators);
+  const explicitGlutenFree = dietaryTextContainsAny(text, DIETARY_RULES.glutenFreeIndicators);
+
+  const isVegan = explicitVegan || (!hasMeatOrFish && !hasDairy && !hasEggs && !hasHoney);
+  const isVegetarian = explicitVegetarian || explicitVegan || !hasMeatOrFish;
+  const isDairyFree = explicitDairyFree || !hasDairy;
+  const isGlutenFree = explicitGlutenFree || (!hasGluten || hasGlutenFreeAlternative);
+
+  return {
+    text,
+    hasMeatOrFish,
+    hasDairy,
+    hasEggs,
+    hasHoney,
+    hasGluten,
+    explicitVegan,
+    explicitVegetarian,
+    explicitDairyFree,
+    explicitGlutenFree,
+    isVegan,
+    isVegetarian,
+    isDairyFree,
+    isGlutenFree
+  };
+}
+
+function addFeatureBadge(badges, label, className = "feature-tag") {
+  const alreadyExists = badges.some((badge) => {
+    return badge.label.toLowerCase() === label.toLowerCase();
+  });
+
+  if (!alreadyExists) {
+    badges.push({
+      label,
+      className
+    });
+  }
+}
+
+function recipeTextContainsForFeatures(recipe, words) {
+  const text = getRecipeDietaryText(recipe);
+
+  return words.some((word) => {
+    return text.includes(normalizeDietaryText(word));
+  });
+}
+
+function hasRecipeTagForFeatures(recipe, tagNames) {
+  const tags = Array.isArray(recipe.tags)
+    ? recipe.tags.map((tag) => normalizeDietaryText(tag))
+    : [];
+
+  return tagNames.some((tagName) => tags.includes(normalizeDietaryText(tagName)));
+}
+
+function getRecipeFeatureBadges(recipe) {
+  const badges = [];
+  const profile = getRecipeDietaryProfile(recipe);
+
+  if (recipe.totalTime <= 15) {
+    addFeatureBadge(badges, "Sehr schnell", "feature-tag feature-fast");
+  } else if (recipe.totalTime <= 30 || hasRecipeTagForFeatures(recipe, ["schnell"])) {
+    addFeatureBadge(badges, "Schnell", "feature-tag feature-fast");
+  }
+
+  if (profile.isVegan) {
+    addFeatureBadge(badges, "Vegan", "feature-tag feature-vegan");
+  } else if (profile.isVegetarian) {
+    addFeatureBadge(badges, "Vegetarisch", "feature-tag feature-vegetarian");
+  }
+
+  if (profile.isDairyFree) {
+    addFeatureBadge(badges, "Milchfrei", "feature-tag feature-dairy-free");
+  }
+
+  if (profile.isGlutenFree) {
+    addFeatureBadge(badges, "Glutenfrei", "feature-tag feature-gluten-free");
+  }
+
+  if (recipeTextContainsForFeatures(recipe, ["pasta", "nudeln", "spaghetti", "tagliatelle", "penne"])) {
+    addFeatureBadge(badges, "Pasta", "feature-tag feature-main");
+  }
+
+  if (recipeTextContainsForFeatures(recipe, ["reis", "risotto", "reissalat"])) {
+    addFeatureBadge(badges, "Reis", "feature-tag feature-main");
+  }
+
+  if (recipe.category === "Suppe" || recipeTextContainsForFeatures(recipe, ["suppe", "eintopf", "brühe"])) {
+    addFeatureBadge(badges, "Suppe", "feature-tag");
+  }
+
+  if (recipe.category === "Salat" || recipeTextContainsForFeatures(recipe, ["salat", "blattsalat"])) {
+    addFeatureBadge(badges, "Salat", "feature-tag");
+  }
+
+  if (recipeTextContainsForFeatures(recipe, [
+    "gemüse",
+    "tomaten",
+    "tomate",
+    "zucchini",
+    "paprika",
+    "karotten",
+    "karotte",
+    "kartoffeln",
+    "kartoffel",
+    "gurke",
+    "zwiebel",
+    "knoblauch"
+  ])) {
+    addFeatureBadge(badges, "Gemüse", "feature-tag");
+  }
+
+  if (Array.isArray(recipe.ingredients) && recipe.ingredients.some((ingredient) => {
+    return ingredient.amount !== null || ingredient.conversionNote;
+  })) {
+    addFeatureBadge(badges, "Metrisch analysiert", "feature-tag");
+  }
+
+  return badges.slice(0, 8);
+}
+
+function recipeMatchesFeatureFilter(recipe, featureValue) {
+  if (featureValue === "all") {
+    return true;
+  }
+
+  const featureBadges = getRecipeFeatureBadges(recipe).map((badge) => {
+    return normalizeDietaryText(badge.label);
+  });
+
+  return featureBadges.includes(normalizeDietaryText(featureValue));
+}
+
+function hasLikelyMeatOrFish(recipe) {
+  return getRecipeDietaryProfile(recipe).hasMeatOrFish;
 }
 
 function getSelectedOptionText(selectElement) {
@@ -703,11 +1054,7 @@ function getDetailRecipeFeatureBadges(recipe) {
     return [];
   }
 
-  if (typeof getRecipeFeatureBadges === "function") {
-    return getRecipeFeatureBadges(recipe);
-  }
-
-  return [];
+  return getRecipeFeatureBadges(recipe);
 }
 
 function getDetailRecipeSourceUrl(recipe) {
@@ -905,6 +1252,10 @@ function initializeActiveFilterChips() {
   window.setTimeout(renderActiveFilterChips, 500);
   window.setTimeout(() => applyRecipeViewMode(getStoredRecipeViewMode()), 50);
   window.setTimeout(() => applyRecipeViewMode(getStoredRecipeViewMode()), 500);
+
+  if (typeof renderRecipes === "function") {
+    window.setTimeout(renderRecipes, 150);
+  }
 }
 
 initializeActiveFilterChips();
