@@ -812,6 +812,54 @@
           </span>
         </label>
 
+        <div class="form-grid">
+          <label>
+            Kategorie
+            <select id="recipeUrlCategoryInput">
+              <option value="Hauptgericht">Hauptgericht</option>
+              <option value="Salat">Salat</option>
+              <option value="Suppe">Suppe</option>
+              <option value="Dessert">Dessert</option>
+              <option value="Snack">Snack</option>
+            </select>
+          </label>
+
+          <label>
+            Schwierigkeit
+            <select id="recipeUrlDifficultyInput">
+              <option value="Einfach">Einfach</option>
+              <option value="Mittel">Mittel</option>
+              <option value="Schwer">Schwer</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            Portionen
+            <input
+              id="recipeUrlServingsInput"
+              type="number"
+              min="1"
+              max="20"
+              value="2"
+              required
+            />
+          </label>
+
+          <label>
+            Kochzeit in Minuten
+            <input
+              id="recipeUrlTimeInput"
+              type="number"
+              min="1"
+              max="999"
+              value="30"
+              required
+            />
+          </label>
+        </div>
+
         <button class="submit-button" type="submit">
           URL-Import simulieren
         </button>
