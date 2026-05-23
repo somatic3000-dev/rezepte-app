@@ -327,6 +327,10 @@ const elements = {
   importUrlForm: document.getElementById("importUrlForm"),
   recipeUrlInput: document.getElementById("recipeUrlInput"),
   recipeUrlTitleInput: document.getElementById("recipeUrlTitleInput"),
+  recipeUrlCategoryInput: document.getElementById("recipeUrlCategoryInput"),
+  recipeUrlDifficultyInput: document.getElementById("recipeUrlDifficultyInput"),
+  recipeUrlServingsInput: document.getElementById("recipeUrlServingsInput"),
+  recipeUrlTimeInput: document.getElementById("recipeUrlTimeInput"),
 
   exportDataButton: document.getElementById("exportDataButton"),
   copyExportButton: document.getElementById("copyExportButton"),
@@ -3053,11 +3057,19 @@ function renderImportLog() {
   });
 }
 
-function createImportSteps(sourceName, recipeTitle) {
+function createImportSteps(sourceName, recipeTitle, importOptions = {}) {
+  const optionsText = [
+    importOptions.category ? `Kategorie: ${importOptions.category}` : "",
+    importOptions.difficulty ? `Schwierigkeit: ${importOptions.difficulty}` : "",
+    importOptions.servings ? `Portionen: ${importOptions.servings}` : "",
+    importOptions.totalTime ? `Kochzeit: ${importOptions.totalTime} Min.` : ""
+  ].filter(Boolean).join(" · ");
+
   return [
     "URL geprüft",
     `Quelle erkannt: ${sourceName}`,
     `Rezeptdaten gefunden: ${recipeTitle}`,
+    optionsText ? `Importoptionen übernommen: ${optionsText}` : "Importoptionen geprüft",
     "Zutaten analysiert",
     "Mengen metrisch normalisiert",
     "Import gespeichert"
@@ -3141,7 +3153,12 @@ function runImportSimulation() {
       sourceName: activeSource.name,
       recipeTitle,
       url: activeSource.baseUrl,
-      steps: createImportSteps(activeSource.name, recipeTitle)
+      steps: createImportSteps(activeSource.name, recipeTitle, {
+        category: "Hauptgericht",
+        difficulty: "Einfach",
+        servings: 2,
+        totalTime: 45
+      })
     }
   );
 
@@ -3153,8 +3170,39 @@ function runImportSimulation() {
 
 function openUrlImportModal() {
   elements.importUrlForm.reset();
+
+  if (elements.recipeUrlCategoryInput) {
+    elements.recipeUrlCategoryInput.value = "Hauptgericht";
+  }
+
+  if (elements.recipeUrlDifficultyInput) {
+    elements.recipeUrlDifficultyInput.value = "Einfach";
+  }
+
+  if (elements.recipeUrlServingsInput) {
+    elements.recipeUrlServingsInput.value = 2;
+  }
+
+  if (elements.recipeUrlTimeInput) {
+    elements.recipeUrlTimeInput.value = 30;
+  }
+
   openModal(elements.importUrlModal);
   elements.recipeUrlInput.focus();
+}
+
+function getUrlImportOptions() {
+  const category = elements.recipeUrlCategoryInput?.value || "Hauptgericht";
+  const difficulty = elements.recipeUrlDifficultyInput?.value || "Einfach";
+  const servings = Number(elements.recipeUrlServingsInput?.value || 2);
+  const totalTime = Number(elements.recipeUrlTimeInput?.value || 30);
+
+  return {
+    category,
+    difficulty,
+    servings: Number.isFinite(servings) ? Math.min(20, Math.max(1, servings)) : 2,
+    totalTime: Number.isFinite(totalTime) ? Math.min(999, Math.max(1, totalTime)) : 30
+  };
 }
 
 function simulateUrlRecipeImport(event) {
@@ -3162,6 +3210,7 @@ function simulateUrlRecipeImport(event) {
 
   const rawUrl = elements.recipeUrlInput.value.trim();
   const customTitle = elements.recipeUrlTitleInput.value.trim();
+  const importOptions = getUrlImportOptions();
 
   let parsedUrl;
 
@@ -3211,11 +3260,11 @@ function simulateUrlRecipeImport(event) {
     sourceId: source.id,
     sourceName: source.name,
     sourceUrl: parsedUrl.href,
-    category: "Hauptgericht",
-    difficulty: "Einfach",
-    servings: 2,
-    totalTime: 30,
-    tags: ["importiert", "url-import", "metrisch"],
+    category: importOptions.category,
+    difficulty: importOptions.difficulty,
+    servings: importOptions.servings,
+    totalTime: importOptions.totalTime,
+    tags: ["importiert", "url-import", "metrisch", importOptions.category.toLowerCase()],
     icon,
     imageClass: getImageClassFromIcon(icon),
     isCustom: true,
@@ -3245,7 +3294,7 @@ function simulateUrlRecipeImport(event) {
       sourceName: source.name,
       recipeTitle,
       url: parsedUrl.href,
-      steps: createImportSteps(source.name, recipeTitle)
+      steps: createImportSteps(source.name, recipeTitle, importOptions)
     }
   );
 
@@ -3256,7 +3305,7 @@ function simulateUrlRecipeImport(event) {
   elements.recipeTypeSelect.value = "imported";
   renderRecipes();
 
-  showToast("Rezept-URL wurde als Simulation importiert.");
+  showToast("Rezept-URL wurde mit deinen Importoptionen simuliert.");
 }
 
 function getOrCreateSourceFromUrl(parsedUrl) {
