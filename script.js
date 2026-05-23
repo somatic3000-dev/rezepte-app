@@ -356,6 +356,7 @@ let showOriginalIngredients = false;
 customRecipes = customRecipes.map(normalizeRecipe);
 sources = sources.map(normalizeSource);
 shoppingList = shoppingList.map(normalizeShoppingItem);
+importLog = importLog.map(normalizeImportLogItem);
 
 function injectRecipeCardBadgeStyles() {
   if (document.getElementById("recipe-card-badge-styles")) {
@@ -452,6 +453,135 @@ function injectRecipeCardBadgeStyles() {
       color: var(--primary-dark, #8f4028);
     }
 
+    .import-log-item.enhanced {
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--border, #ddd0bd);
+      border-radius: 20px;
+      padding: 16px;
+      background: var(--surface, #ffffff);
+    }
+
+    .import-log-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .import-log-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .import-log-title strong {
+      color: var(--text, #111111);
+      font-size: 16px;
+      line-height: 1.25;
+    }
+
+    .import-log-title span {
+      color: var(--muted, #6f6f6f);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .import-status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .import-status-success {
+      background: var(--success, #dfe5d6);
+      color: #405023;
+    }
+
+    .import-status-warning {
+      background: var(--warning, #fff1c7);
+      color: #5a4313;
+    }
+
+    .import-status-error {
+      background: #f8d9d9;
+      color: #8f2525;
+    }
+
+    .import-status-info {
+      background: var(--surface-soft, #f7f3ec);
+      color: var(--text-soft, #333333);
+    }
+
+    .import-step-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .import-step {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+      color: var(--text-soft, #333333);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .import-step-marker {
+      display: inline-grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--success, #dfe5d6);
+      color: #405023;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .import-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .import-meta-item {
+      display: grid;
+      gap: 3px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 14px;
+      padding: 10px;
+      background: var(--surface-soft, #f7f3ec);
+    }
+
+    .import-meta-item span {
+      color: var(--muted, #6f6f6f);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .import-meta-item strong {
+      min-width: 0;
+      color: var(--text, #111111);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     @media (max-width: 720px) {
       .recipe-card-source-row {
         grid-template-columns: 1fr;
@@ -459,6 +589,14 @@ function injectRecipeCardBadgeStyles() {
       }
 
       .recipe-card-source-row strong {
+        white-space: normal;
+      }
+
+      .import-meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .import-meta-item strong {
         white-space: normal;
       }
     }
@@ -545,6 +683,21 @@ function normalizeSource(source) {
     importedRecipeCount: Number(source.importedRecipeCount || 0),
     lastCheckedAt: source.lastCheckedAt || "Noch nicht geprüft",
     errorMessage: source.errorMessage || ""
+  };
+}
+
+function normalizeImportLogItem(item) {
+  return {
+    id: item.id || `log-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    title: item.title || "Importereignis",
+    details: item.details || "",
+    status: item.status || "info",
+    statusLabel: item.statusLabel || getImportStatusLabel(item.status || "info"),
+    sourceName: item.sourceName || "",
+    recipeTitle: item.recipeTitle || "",
+    url: item.url || "",
+    steps: Array.isArray(item.steps) ? item.steps : [],
+    createdAt: item.createdAt || new Date().toISOString()
   };
 }
 
@@ -2745,7 +2898,20 @@ function handleSourceAction(action, sourceId) {
     source.errorMessage = "";
     saveSources();
     renderSources();
-    addImportLog(`Quelle „${source.name}“ geprüft`, "robots.txt erlaubt, Parser verfügbar, Quelle bereit.");
+
+    addImportLog("Quelle geprüft", "robots.txt erlaubt, Parser verfügbar, Quelle bereit.", {
+      status: "success",
+      statusLabel: "Bereit",
+      sourceName: source.name,
+      url: source.baseUrl,
+      steps: [
+        "Quellen-URL geprüft",
+        "robots.txt im Prototyp als erlaubt markiert",
+        "Parser-Typ gesetzt",
+        "Quelle für spätere Importe vorbereitet"
+      ]
+    });
+
     showToast("Quelle wurde geprüft.");
   }
 
@@ -2765,17 +2931,61 @@ function handleSourceAction(action, sourceId) {
   }
 }
 
-function addImportLog(title, details) {
-  importLog.unshift({
-    id: `log-${Date.now()}`,
+function getImportStatusLabel(status) {
+  const labels = {
+    success: "Erfolgreich",
+    warning: "Hinweis",
+    error: "Fehler",
+    info: "Info"
+  };
+
+  return labels[status] || "Info";
+}
+
+function addImportLog(title, details, options = {}) {
+  importLog.unshift(normalizeImportLogItem({
+    id: `log-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     title,
     details,
+    status: options.status || "info",
+    statusLabel: options.statusLabel || getImportStatusLabel(options.status || "info"),
+    sourceName: options.sourceName || "",
+    recipeTitle: options.recipeTitle || "",
+    url: options.url || "",
+    steps: Array.isArray(options.steps) ? options.steps : [],
     createdAt: new Date().toISOString()
-  });
+  }));
 
-  importLog = importLog.slice(0, 10);
+  importLog = importLog.slice(0, 12);
   saveImportLog();
   renderImportLog();
+}
+
+function formatImportDate(value) {
+  try {
+    return new Date(value).toLocaleString("de-DE", {
+      dateStyle: "short",
+      timeStyle: "short"
+    });
+  } catch {
+    return "Unbekannt";
+  }
+}
+
+function getImportStatusClass(status) {
+  if (status === "success") {
+    return "import-status-success";
+  }
+
+  if (status === "warning") {
+    return "import-status-warning";
+  }
+
+  if (status === "error") {
+    return "import-status-error";
+  }
+
+  return "import-status-info";
 }
 
 function renderImportLog() {
@@ -2792,21 +3002,81 @@ function renderImportLog() {
 
   importLog.forEach((item) => {
     const logItem = document.createElement("div");
-    logItem.className = "import-log-item";
+    logItem.className = "import-log-item enhanced";
+
+    const steps = item.steps.length > 0
+      ? `
+        <ul class="import-step-list">
+          ${item.steps.map((step) => `
+            <li class="import-step">
+              <span class="import-step-marker">✓</span>
+              <span>${escapeHtml(step)}</span>
+            </li>
+          `).join("")}
+        </ul>
+      `
+      : "";
 
     logItem.innerHTML = `
-      <strong>${escapeHtml(item.title)}</strong><br />
-      ${escapeHtml(item.details)}
+      <div class="import-log-header">
+        <div class="import-log-title">
+          <strong>${escapeHtml(item.title)}</strong>
+          <span>${escapeHtml(item.details)}</span>
+        </div>
+
+        <span class="import-status-pill ${getImportStatusClass(item.status)}">
+          ${escapeHtml(item.statusLabel)}
+        </span>
+      </div>
+
+      <div class="import-meta-grid">
+        <div class="import-meta-item">
+          <span>Zeitpunkt</span>
+          <strong>${escapeHtml(formatImportDate(item.createdAt))}</strong>
+        </div>
+
+        <div class="import-meta-item">
+          <span>Quelle</span>
+          <strong>${escapeHtml(item.sourceName || "Unbekannt")}</strong>
+        </div>
+
+        <div class="import-meta-item">
+          <span>Rezept</span>
+          <strong>${escapeHtml(item.recipeTitle || "Nicht angegeben")}</strong>
+        </div>
+      </div>
+
+      ${steps}
     `;
 
     elements.importLog.appendChild(logItem);
   });
 }
 
+function createImportSteps(sourceName, recipeTitle) {
+  return [
+    "URL geprüft",
+    `Quelle erkannt: ${sourceName}`,
+    `Rezeptdaten gefunden: ${recipeTitle}`,
+    "Zutaten analysiert",
+    "Mengen metrisch normalisiert",
+    "Import gespeichert"
+  ];
+}
+
 function runImportSimulation() {
   const activeSource = sources.find((source) => source.status === "Aktiv") || sources[0];
 
   if (!activeSource) {
+    addImportLog("Beispiel-Import fehlgeschlagen", "Es ist keine aktive Quelle vorhanden.", {
+      status: "error",
+      statusLabel: "Fehler",
+      steps: [
+        "Keine aktive Quelle gefunden",
+        "Bitte zuerst eine Quelle hinzufügen oder aktivieren"
+      ]
+    });
+
     showToast("Bitte zuerst eine Quelle hinzufügen.");
     return;
   }
@@ -2818,11 +3088,12 @@ function runImportSimulation() {
     : activeSource.parserType;
 
   const alreadyImported = customRecipes.some((recipe) => recipe.id === "import-demo-ofengemuese");
+  const recipeTitle = "Importiertes Ofengemüse";
 
   if (!alreadyImported) {
     customRecipes.push({
       id: "import-demo-ofengemuese",
-      title: "Importiertes Ofengemüse",
+      title: recipeTitle,
       description: "Simuliert importiertes Rezept mit metrisch normalisierten Zutaten.",
       sourceId: activeSource.id,
       sourceName: activeSource.name,
@@ -2860,8 +3131,18 @@ function runImportSimulation() {
   saveSources();
 
   addImportLog(
-    "Beispiel-Import abgeschlossen",
-    `Quelle „${activeSource.name}“ geprüft, strukturierte Rezeptdaten erkannt, Zutaten analysiert, Mengen metrisch normalisiert.`
+    alreadyImported ? "Beispiel-Import erneut geprüft" : "Beispiel-Import abgeschlossen",
+    alreadyImported
+      ? "Das Beispielrezept war bereits vorhanden. Quelle und Importstatus wurden erneut geprüft."
+      : "Quelle geprüft, strukturierte Rezeptdaten erkannt, Zutaten analysiert und Mengen normalisiert.",
+    {
+      status: alreadyImported ? "warning" : "success",
+      statusLabel: alreadyImported ? "Bereits vorhanden" : "Importiert",
+      sourceName: activeSource.name,
+      recipeTitle,
+      url: activeSource.baseUrl,
+      steps: createImportSteps(activeSource.name, recipeTitle)
+    }
   );
 
   renderSourceFilterOptions();
@@ -2887,11 +3168,33 @@ function simulateUrlRecipeImport(event) {
   try {
     parsedUrl = new URL(rawUrl);
   } catch {
+    addImportLog("URL-Import fehlgeschlagen", "Die eingegebene Adresse ist keine gültige URL.", {
+      status: "error",
+      statusLabel: "Ungültige URL",
+      url: rawUrl,
+      steps: [
+        "URL gelesen",
+        "URL-Prüfung fehlgeschlagen",
+        "Import abgebrochen"
+      ]
+    });
+
     showToast("Bitte gib eine gültige URL ein.");
     return;
   }
 
   if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    addImportLog("URL-Import blockiert", "Nur http- und https-URLs werden unterstützt.", {
+      status: "error",
+      statusLabel: "Blockiert",
+      url: rawUrl,
+      steps: [
+        "URL gelesen",
+        `Nicht unterstütztes Protokoll erkannt: ${parsedUrl.protocol}`,
+        "Import abgebrochen"
+      ]
+    });
+
     showToast("Nur http- und https-URLs werden unterstützt.");
     return;
   }
@@ -2935,7 +3238,15 @@ function simulateUrlRecipeImport(event) {
 
   addImportLog(
     `URL-Import simuliert: „${recipeTitle}“`,
-    `URL geprüft: ${parsedUrl.hostname}. Strukturierte Rezeptdaten simuliert, Zutaten analysiert, Mengen metrisch normalisiert, Original-Link gespeichert.`
+    "Der Browser-Prototyp hat den Import nachvollziehbar simuliert. Ein echter Webseitenabruf braucht später einen Backend-Import-Service.",
+    {
+      status: "success",
+      statusLabel: "Simuliert",
+      sourceName: source.name,
+      recipeTitle,
+      url: parsedUrl.href,
+      steps: createImportSteps(source.name, recipeTitle)
+    }
   );
 
   renderSourceFilterOptions();
@@ -3229,7 +3540,7 @@ function importData(event) {
     : deepClone(defaultSources).map(normalizeSource);
 
   importLog = Array.isArray(parsed.data.importLog)
-    ? parsed.data.importLog
+    ? parsed.data.importLog.map(normalizeImportLogItem)
     : [];
 
   saveAllData();
