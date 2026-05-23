@@ -254,6 +254,7 @@ const elements = {
   maxTimeSelect: document.getElementById("maxTimeSelect"),
   sourceFilterSelect: document.getElementById("sourceFilterSelect"),
   recipeTypeSelect: document.getElementById("recipeTypeSelect"),
+  featureFilterSelect: document.getElementById("featureFilterSelect"),
   resetFiltersButton: document.getElementById("resetFiltersButton"),
   quickFilterButtons: document.querySelectorAll(".quick-filter"),
   favoriteFilterButton: document.getElementById("favoriteFilterButton"),
@@ -721,8 +722,6 @@ function parseIngredientLine(line) {
     }
   }
 
-  const lowerFood = foodText.toLowerCase();
-
   if (qualitativePatterns.some((pattern) => lower.includes(pattern))) {
     note = appendNote(note, getMatchedPattern(originalText, qualitativePatterns));
     scalable = false;
@@ -751,6 +750,8 @@ function parseIngredientLine(line) {
   }
 
   if (!unit && amount !== null) {
+    const lowerFood = foodText.toLowerCase();
+
     if (lowerFood.startsWith("ei") || lowerFood.startsWith("eier")) {
       unit = "Stück";
       foodText = "Ei";
@@ -1219,30 +1220,6 @@ function recipeTextContains(recipe, words) {
   return words.some((word) => text.includes(word.toLowerCase()));
 }
 
-function hasLikelyAnimalProduct(recipe) {
-  return recipeTextContains(recipe, [
-    "hähnchen",
-    "huhn",
-    "rind",
-    "schwein",
-    "speck",
-    "wurst",
-    "fisch",
-    "lachs",
-    "thunfisch",
-    "garnele",
-    "garnelen",
-    "milch",
-    "joghurt",
-    "käse",
-    "sahne",
-    "butter",
-    "ei",
-    "eier",
-    "honig"
-  ]);
-}
-
 function hasLikelyMeatOrFish(recipe) {
   return recipeTextContains(recipe, [
     "hähnchen",
@@ -1318,6 +1295,15 @@ function getRecipeFeatureBadges(recipe) {
   }
 
   return badges.slice(0, 6);
+}
+
+function recipeMatchesFeatureFilter(recipe, featureValue) {
+  if (featureValue === "all") {
+    return true;
+  }
+
+  const featureBadges = getRecipeFeatureBadges(recipe).map((badge) => badge.label.toLowerCase());
+  return featureBadges.includes(featureValue.toLowerCase());
 }
 
 function renderSourceFilterOptions() {
@@ -1436,6 +1422,7 @@ function getFilteredRecipes() {
   const maxTimeValue = elements.maxTimeSelect.value;
   const sourceValue = elements.sourceFilterSelect.value;
   const recipeTypeValue = elements.recipeTypeSelect.value;
+  const featureValue = elements.featureFilterSelect ? elements.featureFilterSelect.value : "all";
 
   let filteredRecipes = recipes.filter((recipe) => {
     const featureBadges = getRecipeFeatureBadges(recipe);
@@ -1450,6 +1437,7 @@ function getFilteredRecipes() {
     const matchesTime = maxTimeValue === "all" || recipe.totalTime <= Number(maxTimeValue);
     const matchesSource = sourceValue === "all" || getRecipeSourceKey(recipe) === sourceValue;
     const matchesRecipeType = recipeTypeValue === "all" || getRecipeType(recipe) === recipeTypeValue;
+    const matchesFeature = recipeMatchesFeatureFilter(recipe, featureValue);
     const matchesFavorite = !showOnlyFavorites || isFavorite(recipe.id);
     const matchesQuickFilter = activeQuickFilter === "all" || searchableText.includes(activeQuickFilter);
 
@@ -1460,6 +1448,7 @@ function getFilteredRecipes() {
       matchesTime &&
       matchesSource &&
       matchesRecipeType &&
+      matchesFeature &&
       matchesFavorite &&
       matchesQuickFilter
     );
@@ -1604,6 +1593,11 @@ function resetFilters() {
   elements.maxTimeSelect.value = "all";
   elements.sourceFilterSelect.value = "all";
   elements.recipeTypeSelect.value = "all";
+
+  if (elements.featureFilterSelect) {
+    elements.featureFilterSelect.value = "all";
+  }
+
   showOnlyFavorites = false;
   setQuickFilter("all");
   renderRecipes();
@@ -3145,6 +3139,10 @@ function clearUserData() {
   elements.sourceFilterSelect.value = "all";
   elements.recipeTypeSelect.value = "all";
 
+  if (elements.featureFilterSelect) {
+    elements.featureFilterSelect.value = "all";
+  }
+
   renderSourceFilterOptions();
   renderRecipes();
   renderShoppingList();
@@ -3215,6 +3213,11 @@ function setupEventListeners() {
   elements.maxTimeSelect.addEventListener("change", renderRecipes);
   elements.sourceFilterSelect.addEventListener("change", renderRecipes);
   elements.recipeTypeSelect.addEventListener("change", renderRecipes);
+
+  if (elements.featureFilterSelect) {
+    elements.featureFilterSelect.addEventListener("change", renderRecipes);
+  }
+
   elements.resetFiltersButton.addEventListener("click", resetFilters);
 
   elements.quickFilterButtons.forEach((button) => {
