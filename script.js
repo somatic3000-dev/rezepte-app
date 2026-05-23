@@ -1210,6 +1210,83 @@ function getRecipeSearchText(recipe) {
   ].join(" ").toLowerCase();
 }
 
+function getRecipeRelevanceScore(recipe, searchTerm) {
+  const cleanSearchTerm = String(searchTerm || "").toLowerCase().trim();
+
+  if (!cleanSearchTerm) {
+    let score = 0;
+
+    if (isFavorite(recipe.id)) {
+      score += 15;
+    }
+
+    if (recipe.isImported) {
+      score += 8;
+    }
+
+    score += Math.max(0, 60 - recipe.totalTime) / 10;
+
+    return score;
+  }
+
+  const searchWords = cleanSearchTerm
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter(Boolean);
+
+  let score = 0;
+
+  const title = recipe.title.toLowerCase();
+  const description = recipe.description.toLowerCase();
+  const category = recipe.category.toLowerCase();
+  const sourceName = recipe.sourceName.toLowerCase();
+  const tags = recipe.tags.map((tag) => tag.toLowerCase());
+  const ingredients = recipe.ingredients.map((ingredient) => {
+    return `${ingredient.food} ${ingredient.normalizedFood}`.toLowerCase();
+  });
+  const featureBadges = getRecipeFeatureBadges(recipe).map((badge) => badge.label.toLowerCase());
+
+  searchWords.forEach((word) => {
+    if (title === word) {
+      score += 100;
+    }
+
+    if (title.includes(word)) {
+      score += 45;
+    }
+
+    if (tags.includes(word)) {
+      score += 38;
+    }
+
+    if (featureBadges.includes(word)) {
+      score += 35;
+    }
+
+    if (category.includes(word)) {
+      score += 28;
+    }
+
+    if (ingredients.some((ingredient) => ingredient.includes(word))) {
+      score += 26;
+    }
+
+    if (description.includes(word)) {
+      score += 16;
+    }
+
+    if (sourceName.includes(word)) {
+      score += 8;
+    }
+  });
+
+  if (isFavorite(recipe.id)) {
+    score += 5;
+  }
+
+  return score;
+}
+
 function hasRecipeTag(recipe, tagNames) {
   const tags = recipe.tags.map((tag) => tag.toLowerCase());
   return tagNames.some((tagName) => tags.includes(tagName.toLowerCase()));
@@ -1454,16 +1531,72 @@ function getFilteredRecipes() {
     );
   });
 
+  if (sortValue === "relevance") {
+    filteredRecipes.sort((a, b) => {
+      const scoreDifference = getRecipeRelevanceScore(b, searchTerm) - getRecipeRelevanceScore(a, searchTerm);
+
+      if (scoreDifference !== 0) {
+        return scoreDifference;
+      }
+
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  }
+
+  if (sortValue === "favorites") {
+    filteredRecipes.sort((a, b) => {
+      const favoriteDifference = Number(isFavorite(b.id)) - Number(isFavorite(a.id));
+
+      if (favoriteDifference !== 0) {
+        return favoriteDifference;
+      }
+
+      return a.title.localeCompare(b.title, "de");
+    });
+  }
+
+  if (sortValue === "recentImported") {
+    filteredRecipes.sort((a, b) => {
+      const importedDifference = Number(b.isImported) - Number(a.isImported);
+
+      if (importedDifference !== 0) {
+        return importedDifference;
+      }
+
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  }
+
+  if (sortValue === "newest") {
+    filteredRecipes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
   if (sortValue === "time") {
-    filteredRecipes.sort((a, b) => a.totalTime - b.totalTime);
+    filteredRecipes.sort((a, b) => {
+      const timeDifference = a.totalTime - b.totalTime;
+
+      if (timeDifference !== 0) {
+        return timeDifference;
+      }
+
+      return a.title.localeCompare(b.title, "de");
+    });
   }
 
   if (sortValue === "title") {
     filteredRecipes.sort((a, b) => a.title.localeCompare(b.title, "de"));
   }
 
-  if (sortValue === "newest") {
-    filteredRecipes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  if (sortValue === "source") {
+    filteredRecipes.sort((a, b) => {
+      const sourceDifference = a.sourceName.localeCompare(b.sourceName, "de");
+
+      if (sourceDifference !== 0) {
+        return sourceDifference;
+      }
+
+      return a.title.localeCompare(b.title, "de");
+    });
   }
 
   return filteredRecipes;
@@ -2808,7 +2941,7 @@ function simulateUrlRecipeImport(event) {
   renderSourceFilterOptions();
   closeModal("importUrl");
   setView("recipes");
-  elements.sortSelect.value = "newest";
+  elements.sortSelect.value = "recentImported";
   elements.recipeTypeSelect.value = "imported";
   renderRecipes();
 
