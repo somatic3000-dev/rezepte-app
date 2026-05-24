@@ -206,7 +206,7 @@
           </label>
 
           <label>
-            Ernährung & Eigenschaften
+            Ernährung &amp; Eigenschaften
             <select id="featureFilterSelect">
               <option value="all">Alle Eigenschaften</option>
               <option value="vegan">Vegan</option>
@@ -776,17 +776,9 @@
       <h2 id="importUrlTitle">Rezept aus URL hinzufügen</h2>
 
       <p>
-        In diesem Browser-Prototyp wird der Import simuliert. Die App prüft die URL,
-        erstellt einen nachvollziehbaren Importstatus und speichert ein normalisiertes
-        Beispielrezept mit Original-Link.
+        Gib eine Rezept-URL ein – die App lädt die echten Zutaten und Zubereitungsschritte
+        direkt von der Webseite.
       </p>
-
-      <div class="notice-card">
-        <strong>Hinweis:</strong>
-        Echte Webseiten können erst mit einem Backend zuverlässig geladen werden.
-        Dafür braucht die App später einen Import-Service, der CORS, robots.txt,
-        strukturierte Rezeptdaten und rechtliche Vorgaben berücksichtigt.
-      </div>
 
       <form id="importUrlForm" class="recipe-form">
         <label>
@@ -808,7 +800,7 @@
           />
 
           <span class="form-help">
-            Wenn du nichts eingibst, erzeugt die App einen passenden Namen aus der URL.
+            Wenn du nichts eingibst, wird der Name automatisch aus der Seite übernommen.
           </span>
         </label>
 
@@ -861,7 +853,7 @@
         </div>
 
         <button class="submit-button" type="submit">
-          URL-Import simulieren
+          Rezept importieren
         </button>
       </form>
     </div>
@@ -870,7 +862,7 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
   <script src="script.js"></script>
-  <script src="active-filters.js"></script>
   <script src="backend.js"></script>
+  <script src="active-filters.js"></script>
 </body>
 </html>
