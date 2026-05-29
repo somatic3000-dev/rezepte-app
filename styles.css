@@ -2411,3 +2411,108 @@ textarea:focus {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ========================================================================
+   HOTFIX 2026-05-29
+   Problem: .app-header darf NICHT sticky/fixed sein, weil die Hero-Section
+   im HTML innerhalb des Headers liegt. Wenn der ganze Header sticky ist,
+   liegt die komplette Hero-Section über dem restlichen App-Inhalt und
+   Navigation/Modals wirken blockiert.
+   ======================================================================== */
+
+.app-header {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  z-index: auto !important;
+  min-height: 0 !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.topbar {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  z-index: 10 !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.hero,
+.hero-copy,
+.hero-card,
+.container,
+.app-view,
+.dashboard,
+.search-panel,
+.recipe-grid,
+.recipe-card,
+.source-list,
+.shopping-list,
+.settings-grid {
+  position: relative;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.hero::before,
+.hero::after {
+  content: none !important;
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.container {
+  z-index: 1 !important;
+  pointer-events: auto !important;
+}
+
+.app-view {
+  display: none !important;
+  pointer-events: auto !important;
+}
+
+.app-view.active-view {
+  display: block !important;
+}
+
+.hidden,
+.modal.hidden {
+  display: none !important;
+}
+
+.modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1000 !important;
+  pointer-events: auto !important;
+}
+
+.modal:not(.hidden) {
+  display: grid !important;
+}
+
+.modal-backdrop {
+  pointer-events: auto !important;
+}
+
+.modal-content {
+  pointer-events: auto !important;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+label {
+  pointer-events: auto;
+}
