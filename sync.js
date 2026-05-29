@@ -93,12 +93,12 @@ async function syncRecipesFromBackend() {
 
 // getAllRecipes() erweitern um synced Rezepte
 const _originalGetAllRecipes = getAllRecipes;
-function getAllRecipes() {
+window.getAllRecipes = function() {
   const base = _originalGetAllRecipes();
   const syncIds = new Set(base.map(r => r.id));
   const newSynced = syncedRecipes.filter(r => !syncIds.has(r.id));
   return [...base, ...newSynced];
-}
+};
 
 // URL zur Import-Liste hinzufügen
 async function addUrlToImportList(url, label) {
