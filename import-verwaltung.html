@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto-Import Verwaltung – RecipeFinder</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Georgia", serif;
+      background: #0f0f0f;
+      color: #f0ece4;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 48px;
+    }
+
+    .eyebrow {
+      font-family: monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #c8a97e;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 400;
+      line-height: 1.15;
+      color: #f0ece4;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #c8a97e;
+      font-family: monospace;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-decoration: none;
+      margin-bottom: 32px;
+    }
+
+    .back-link:hover { color: #f0ece4; }
+
+    .card {
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 28px;
+      background: #161616;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-family: monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #c8a97e;
+      margin-bottom: 20px;
+    }
+
+    .form-row {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-size: 12px;
+      font-family: monospace;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #666;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input[type="url"],
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      background: #1e1e1e;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      color: #f0ece4;
+      font-size: 14px;
+      font-family: monospace;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: #c8a97e; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 0 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: monospace;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #c8a97e;
+      color: #0f0f0f;
+      font-weight: bold;
+      width: 100%;
+    }
+
+    .btn-primary:hover { background: #dbbf94; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-danger {
+      background: transparent;
+      border: 1px solid #3a2020;
+      color: #e07070;
+      padding: 6px 14px;
+      min-height: 34px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .btn-danger:hover { background: #2a1515; border-color: #e07070; }
+
+    .url-list { display: grid; gap: 12px; }
+
+    .url-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 16px;
+      background: #1a1a1a;
+      border: 1px solid #252525;
+      border-radius: 12px;
+    }
+
+    .url-label {
+      font-size: 14px;
+      color: #f0ece4;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .url-address {
+      font-family: monospace;
+      font-size: 11px;
+      color: #555;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .url-meta {
+      font-family: monospace;
+      font-size: 11px;
+      color: #444;
+      margin-top: 4px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4caf50;
+      margin-right: 6px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 32px;
+      color: #444;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #c8a97e;
+      color: #0f0f0f;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: bold;
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .info-box {
+      background: #1a1a12;
+      border: 1px solid #3a3820;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #a09060;
+      line-height: 1.6;
+    }
+
+    .cron-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1a2a1a;
+      border: 1px solid #2a4a2a;
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #4caf50;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <a class="back-link" href="https://somatic3000-dev.github.io/rezepte-app/">
+    ← Zurück zur App
+  </a>
+
+  <header>
+    <p class="eyebrow">RecipeFinder</p>
+    <h1>Auto-Import<br>Verwaltung</h1>
+    <p class="subtitle">URLs die jeden Montag automatisch nach neuen Rezepten durchsucht werden.</p>
+    <div class="cron-badge">
+      <span>●</span> Wöchentlich · Montags 07:00 Uhr
+    </div>
+  </header>
+
+  <div class="info-box">
+    ℹ️ Trage hier einzelne Rezept-URLs ein – z.B. direkt ein Rezept von Lecker.de oder Allrecipes.com. Das System prüft wöchentlich ob neue Rezepte importiert werden können.
+  </div>
+
+  <div class="card">
+    <p class="card-title">Neue URL hinzufügen</p>
+    <div class="form-row">
+      <div>
+        <label>Rezept-URL</label>
+        <input type="url" id="urlInput" placeholder="https://www.lecker.de/rezept/..." />
+      </div>
+      <div>
+        <label>Bezeichnung (optional)</label>
+        <input type="text" id="labelInput" placeholder="z.B. Lecker – Pasta Carbonara" />
+      </div>
+    </div>
+    <button class="btn btn-primary" id="addBtn" onclick="addUrl()">
+      + URL hinzufügen
+    </button>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Gespeicherte URLs (<span id="urlCount">0</span>)</p>
+    <div class="url-list" id="urlList">
+      <div class="empty">Lade URLs …</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const BACKEND = "https://rezepte-backend.vercel.app";
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2800);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return "Noch nie";
+    return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
+  async function loadUrls() {
+    try {
+      const res = await fetch(`${BACKEND}/api/urls`);
+      const data = await res.json();
+      renderUrls(data.urls || []);
+    } catch {
+      document.getElementById("urlList").innerHTML = '<div class="empty">Fehler beim Laden.</div>';
+    }
+  }
+
+  function renderUrls(urls) {
+    document.getElementById("urlCount").textContent = urls.length;
+    const list = document.getElementById("urlList");
+
+    if (urls.length === 0) {
+      list.innerHTML = '<div class="empty">Noch keine URLs gespeichert.</div>';
+      return;
+    }
+
+    list.innerHTML = urls.map(u => `
+      <div class="url-item">
+        <div>
+          <div class="url-label">${u.label || u.url}</div>
+          <div class="url-address">${u.url}</div>
+          <div class="url-meta">
+            <span class="status-dot"></span>Aktiv ·
+            Hinzugefügt: ${formatDate(u.addedAt)} ·
+            Letzter Import: ${formatDate(u.lastImportedAt)}
+          </div>
+        </div>
+        <button class="btn btn-danger" onclick="removeUrl('${encodeURIComponent(u.url)}')">
+          Entfernen
+        </button>
+      </div>
+    `).join("");
+  }
+
+  async function addUrl() {
+    const url = document.getElementById("urlInput").value.trim();
+    const label = document.getElementById("labelInput").value.trim();
+
+    if (!url) { showToast("Bitte eine URL eingeben."); return; }
+
+    try {
+      new URL(url);
+    } catch {
+      showToast("Ungültige URL.");
+      return;
+    }
+
+    const btn = document.getElementById("addBtn");
+    btn.disabled = true;
+    btn.textContent = "Wird hinzugefügt …";
+
+    try {
+      const res = await fetch(`${BACKEND}/api/urls`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, label })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        document.getElementById("urlInput").value = "";
+        document.getElementById("labelInput").value = "";
+        renderUrls(data.urls || []);
+        showToast("URL wurde hinzugefügt.");
+      } else {
+        showToast("Fehler: " + (data.error || "Unbekannt"));
+      }
+    } catch {
+      showToast("Verbindungsfehler.");
+    }
+
+    btn.disabled = false;
+    btn.textContent = "+ URL hinzufügen";
+  }
+
+  async function removeUrl(encodedUrl) {
+    const url = decodeURIComponent(encodedUrl);
+    if (!confirm(`URL entfernen?\n\n${url}`)) return;
+
+    try {
+      const res = await fetch(`${BACKEND}/api/urls?url=${encodedUrl}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        renderUrls(data.urls || []);
+        showToast("URL wurde entfernt.");
+      }
+    } catch {
+      showToast("Verbindungsfehler.");
+    }
+  }
+
+  // Enter-Taste im URL-Feld
+  document.getElementById("urlInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") addUrl();
+  });
+
+  loadUrls();
+</script>
+</body>
+</html>
