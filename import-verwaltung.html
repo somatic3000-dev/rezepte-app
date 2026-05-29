@@ -290,6 +290,17 @@
     </button>
   </div>
 
+  <div class="card" style="border-color:#2a3a2a;background:#141a14">
+    <p class="card-title" style="color:#4caf50">Manueller Scan</p>
+    <p style="color:#666;font-size:13px;margin-bottom:16px;line-height:1.6">
+      Startet sofort einen Scan aller gespeicherten Seiten nach neuen Rezepten.<br>
+      Normalerweise läuft das automatisch jeden Montag um 07:00 Uhr.
+    </p>
+    <button class="btn btn-primary" id="scanBtn" onclick="runScan()" style="background:#4caf50;color:#0f0f0f">
+      ▶ Jetzt scannen
+    </button>
+  </div>
+
   <div class="card">
     <p class="card-title">Gespeicherte URLs (<span id="urlCount">0</span>)</p>
     <div class="url-list" id="urlList">
@@ -414,6 +425,29 @@
   document.getElementById("urlInput").addEventListener("keydown", e => {
     if (e.key === "Enter") addUrl();
   });
+
+  async function runScan() {
+    const btn = document.getElementById("scanBtn");
+    btn.disabled = true;
+    btn.textContent = "Scanne …";
+    showToast("Scan gestartet – das kann 1–2 Minuten dauern …");
+    try {
+      const secret = prompt("Bitte CRON_SECRET eingeben:");
+      if (!secret) { btn.disabled = false; btn.textContent = "▶ Jetzt scannen"; return; }
+      const res = await fetch(`${BACKEND}/api/scan`, {
+        headers: { "Authorization": `Bearer ${secret}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`✓ ${data.imported} Rezepte importiert!`);
+        loadUrls();
+      } else {
+        showToast("Fehler: " + (data.error || "Unbekannt"));
+      }
+    } catch { showToast("Verbindungsfehler."); }
+    btn.disabled = false;
+    btn.textContent = "▶ Jetzt scannen";
+  }
 
   loadUrls();
 </script>
